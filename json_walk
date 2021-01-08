@@ -243,7 +243,7 @@ function json_walk_dict(s, s_len, s_idx,     c, token, idx){
         if (json_walk_value(s, s_len, s_idx) == true) {     # value
             s_idx = JSON_WALK_VALUE_IDX;    token = token JSON_WALK_VALUE_TOKEN
         } else {
-            json_walk_panic("json_walk_dict() pect a value", s, s_idx)
+            json_walk_panic("json_walk_dict() Expect a value", s, s_idx)
         }
 
         if (json_walk_empty(s, s_len, s_idx) == true) {     # optional
