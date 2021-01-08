@@ -3,5 +3,9 @@ BEGIN{
 }
 
 { 
-    print json_walk($0)
+    s = gsub("gitee", "github", $0)
+    print($0)
+    print(s)
+    # json_walk(s)
+    # print($0)
 }
