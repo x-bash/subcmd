@@ -11,6 +11,10 @@ BEGIN{
 
 # Ord module
 
+function debug(msg){
+	# print "DEBUG:" msg > "/dev/stderr"
+}
+
 BEGIN {
     ord_init()
 }
@@ -24,6 +28,7 @@ function ord_init(    low, high, i, t)
     } else if (sprintf("%c", 128 + 7) == "\a") {
         # ascii, mark parity
         low = 128
+        # low = 0
         high = 255
     } else {        # ebcdic(!)
         low = 0
@@ -49,12 +54,12 @@ function char_at(s, idx) {
     return substr(s, idx, 1)
 }
 
-function char_get(s) {
-    return char_at(s, 1)
-}
+# function char_get(s) {
+#     return char_at(s, 1)
+# }
 
 function char_is_number(c,      o) {
-    o = __ord__[c]
+    o = ord(c)
     if ( (o >= 48) && (o <= 57) ) {
         return true
     }
@@ -68,25 +73,26 @@ function panic(msg){
 
 
 
-
-# PARSE_STRING_IDX = 0
-# PARSE_STRING_VALUE = ""
-function parse_string(c, s, s_len, s_idx,     token, slash){
-
+function json_walk_string(s, s_len, s_idx,     c, token, slash){
+    debug("json_walk_string start() ")
+    c = char_at(s, s_idx)
     if (c != "\"") {
-        return 1
+        debug("json_walk_string not right() ")
+        return false
     }
 
     token = c
     slash = 0
     while (s_idx < s_len) {
         s_idx ++
-        c = substr(s, s_idx, 1)
+        c = char_at(s, s_idx)
 
         if (c == "\"") {
             token = token c
+            debug("json_walk_string continue() " c " " slash " " token)
             if (slash % 2 == 0) {
                 s_idx ++
+                debug("json_walk_string break() " c " " slash " " token)
                 break
             }
             slash = 0
@@ -97,32 +103,38 @@ function parse_string(c, s, s_len, s_idx,     token, slash){
         } else {
             slash = 0
         }
+
+        debug("json_walk_string continue() " c)
         
         token = token c
     }
 
-    PARSE_STRING_IDX = s_idx
-    PARSE_STRING_VALUE = token
+    JSON_WALK_STRING_IDX = s_idx
+    JSON_WALK_STRING_TOKEN = token
 
-    return 0
+    debug("json_walk_string end() ")
+
+    return true
 }
 
-# PARSE_EMPTY_IDX = 0
-# PARSE_EMPTY_VALUE = ""
-function parse_empty(s, s_len, s_idx,     idx, o, token, slash){
+# JSON_WALK_EMPTY_IDX = 0
+# JSON_WALK_EMPTY_TOKEN = ""
+function json_walk_empty(s, s_len, s_idx,     idx, o, token, slash){
     token = ""
     idx = s_idx
     while (idx < s_len) {
         c = substr(s, idx, 1)
 
-        if (__ord__[c] > 32) break
-            
+        if (ord(c) > 32) break
+        
         token = token c
         idx ++
     }
 
-    PARSE_EMPTY_IDX = s_idx
-    PARSE_EMPTY_VALUE = token
+    JSON_WALK_EMPTY_IDX = idx
+    JSON_WALK_EMPTY_TOKEN = token
+
+    debug("json_walk_empty: " idx " --- " length(JSON_WALK_EMPTY_TOKEN))
 
     if (idx == s_idx) {
         return false
@@ -133,80 +145,98 @@ function parse_empty(s, s_len, s_idx,     idx, o, token, slash){
 
 
 # Handle 
-function parse_number(c, s, s_len, s_idx) {
+function json_walk_number(s, s_len, s_idx,      c) {
+    JSON_WALK_NUMBER_IDX = s_idx
+    JSON_WALK_NUMBER_TOKEN = ""
 
-    PARSE_NUMBER_IDX = s_idx
-    PARSE_NUMBER_VALUE = ""
-
-    c = substr(s, idx, 1)
+    c = substr(s, s_idx, 1)
     # 0 represent not found
     if ( index("-0123456789e.", c) == 0 ) {
+        debug("json_walk_number(): fail first letter: " c " " index("-0123456789e.", c) )
         return false
     }
-    idx ++
 
-    while (idx <= s_len) {
-        c = substr(s, idx, 1)
+    JSON_WALK_NUMBER_TOKEN = c
+    s_idx ++
+
+    while (s_idx <= s_len) {
+        debug("json_walk_number(): " s_idx " " s_len " " c)
+        c = char_at(s, s_idx)
         # 0 represent not found
         if ( index("-0123456789e.", c) == 0 ) break
-        PARSE_NUMBER_VALUE = PARSE_NUMBER_VALUE c
-        idx ++
+        JSON_WALK_NUMBER_TOKEN = JSON_WALK_NUMBER_TOKEN c
+        s_idx ++
     }
 
-    PARSE_NUMBER_IDX = idx
-}
-
-
-function parse_primitive(c, s, s_len, s_idx,     idx, token, slash){
-    PARSE_PRIMITIVE_IDX = idx;                  PARSE_PRIMITIVE_VALUE = ""
-
-    if ( str_startswith(s, "true") ) {
-        PARSE_PRIMITIVE_IDX = s_idx + 4;        PARSE_PRIMITIVE_VALUE = "true"
-    } else if ( str_startswith(s, "false") ) {
-        PARSE_PRIMITIVE_IDX = s_idx + 5;        PARSE_PRIMITIVE_VALUE = "false"
-    } else {
-        if (parse_number(c, s, s_len, s_idx) == false) {
-            return false
-        }
-        PARSE_PRIMITIVE_IDX = PARSE_NUMBER_IDX; PARSE_PRIMITIVE_VALUE = PARSE_NUMBER_VALUE
-    }
+    JSON_WALK_NUMBER_IDX = s_idx
+    debug("json_walk_number end(): " JSON_WALK_NUMBER_TOKEN)
 
     return true
 }
 
-# PARSE_EMPTY_IDX = 0
-# PARSE_EMPTY_VALUE = ""
 
-function parse_dict(s, s_len, s_idx,     c, token, idx){
-    PARSE_DICT_IDX = s_idx;     PARSE_DICT_VALUE = ""
+function json_walk_primitive(s, s_len, s_idx,     token, slash){
+    JSON_WALK_PRIMITIVE_IDX = s_idx;                  JSON_WALK_PRIMITIVE_TOKEN = ""
+
+    if ( str_startswith(s, "true") == true ) {
+        JSON_WALK_PRIMITIVE_IDX = s_idx + 4;        JSON_WALK_PRIMITIVE_TOKEN = "true"
+    } else if ( str_startswith(s, "false") == true ) {
+        JSON_WALK_PRIMITIVE_IDX = s_idx + 5;        JSON_WALK_PRIMITIVE_TOKEN = "false"
+    } else {
+        debug("json_walk_primitive(): json_walk_number()" )
+        if (json_walk_number(s, s_len, s_idx) == false) {
+            debug("json_walk_primitive(): json_walk_number()" )
+            return false
+        }
+        JSON_WALK_PRIMITIVE_IDX = JSON_WALK_NUMBER_IDX; JSON_WALK_PRIMITIVE_TOKEN = JSON_WALK_NUMBER_TOKEN
+    }
+
+    debug("json_walk_primitive(): " JSON_WALK_PRIMITIVE_TOKEN)
+
+    return true
+}
+
+function json_walk_dict(s, s_len, s_idx,     c, token, idx){
+    JSON_WALK_DICT_IDX = s_idx;     JSON_WALK_DICT_TOKEN = ""
 
     c = substr(s, s_idx, 1)
     if (c != "{") return false
     s_idx ++;   token = c
     
     while (1) {
-        if (parse_empty(s, s_len, s_idx) == true) {     # optional
-            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        if (json_walk_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        if (parse_string(s, s_len, s_idx) == true) {    # key
-            s_idx = PARSE_STRING_IDX;   token = token PARSE_STRING_VALUE
+        if (json_walk_string(s, s_len, s_idx) == true) {    # key
+            s_idx = JSON_WALK_STRING_IDX;   token = token JSON_WALK_STRING_TOKEN
         } else {
-            panic("Exepect a key")
+            panic("json_walk_dict() Exepect a key: ->" substr(s, s_idx, 10))
         }
 
-        if (parse_empty(s, s_len, s_idx) == true) {     # optional
-            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        if (json_walk_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        if (parse_value(s, s_len, s_idx) == true) {     # value
-            s_idx = PARSE_VALUE_IDX;    token = token PARSE_VALUE_VALUE
+        c = char_at(s, s_idx)
+        if (c == ":") {
+            s_idx ++;   token = token c;
+        } else{
+            panic("json_walk_dict() Exepect :: ->" substr(s, s_idx, 10))
+        }
+
+        if (json_walk_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
+        }
+
+        if (json_walk_value(s, s_len, s_idx) == true) {     # value
+            s_idx = JSON_WALK_VALUE_IDX;    token = token JSON_WALK_VALUE_TOKEN
         } else {
-            panic("Exepect a value")
+            panic("json_walk_dict() Exepect a value: ->" substr(s, s_idx, 10))
         }
 
-        if (parse_empty(s, s_len, s_idx) == true) {     # optional
-            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        if (json_walk_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
         c = char_at(s, s_idx)
@@ -219,14 +249,18 @@ function parse_dict(s, s_len, s_idx,     c, token, idx){
         }
     }
 
-    PARSE_DICT_IDX = s_idx;     PARSE_DICT_VALUE = token
+    JSON_WALK_DICT_IDX = s_idx;     JSON_WALK_DICT_TOKEN = token
+    debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
+    return true
 }
 
-# PARSE_EMPTY_IDX = 0
-# PARSE_EMPTY_VALUE = ""
+# JSON_WALK_EMPTY_IDX = 0
+# JSON_WALK_EMPTY_TOKEN = ""
 
-function parse_array(s, s_len, s_idx,     c, token, idx){
-    PARSE_ARRAY_IDX = s_idx;    PARSE_ARRAY_VALUE = "";
+function json_walk_array(s, s_len, s_idx,     c, token, idx){
+    
+    debug("json_walk_array start() ")
+    JSON_WALK_ARRAY_IDX = s_idx;    JSON_WALK_ARRAY_TOKEN = "";
 
     c = substr(s, s_idx, 1)
     if (c != "[") return false
@@ -235,19 +269,26 @@ function parse_array(s, s_len, s_idx,     c, token, idx){
     s_idx ++
 
     while (1) {
-        if (parse_empty(s, s_len, s_idx) == true) {     # optional
-            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        debug("loop")
+        if (json_walk_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        if (parse_value(s, s_len, s_idx) == true) {     # value
-            s_idx = PARSE_VALUE_IDX;    token = token PARSE_VALUE_VALUE
+        debug("-> json_walk_value")
+
+        if (json_walk_value(s, s_len, s_idx) == true) {     # value
+            s_idx = JSON_WALK_VALUE_IDX;    token = token JSON_WALK_VALUE_TOKEN
         } else {
-            panic("Exepect a value")
+            panic("json_walk_array() Exepect a value: ->" substr(s, s_idx, 10))
         }
 
-        if (parse_empty(s, s_len, s_idx) == true) {     # optional
-            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        debug("-> json_walk_empty")
+
+        if (json_walk_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
+
+        debug("-> detect")
 
         c = char_at(s, s_idx)
         if (c == "]") {
@@ -255,92 +296,58 @@ function parse_array(s, s_len, s_idx,     c, token, idx){
         } else if (c == ",") {
             s_idx ++;   token = token c;
         } else {
-            panic("Exepect , or ]")
+            panic("json_walk_array() Exepect , or ]: ->" substr(s, s_idx, 10))
         }
     }
 
-    PARSE_ARRAY_IDX = s_idx;    PARSE_ARRAY_VALUE = token
+    JSON_WALK_ARRAY_IDX = s_idx;    JSON_WALK_ARRAY_TOKEN = token
+    debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
+    return true
 }
 
 # string | primitive | dict | array
-function parse_value(s, s_len, s_idx,     c, token, idx){
-    if (parse_string(s, s_len, s_idx) == true) {    # key
-        s_idx = PARSE_STRING_IDX;       token = token PARSE_STRING_VALUE
-    } else if (parse_primitive(s, s_len, s_idx) == true) {
-        s_idx = PARSE_PRIMITIVE_IDX;    token = token PARSE_PRIMITIVE_VALUE
-    } else if (parse_dict(s, s_len, s_idx)) {
-        s_idx = PARSE_DICT_IDX;         token = token PARSE_DICT_VALUE
-    } else if (parse_array(s, s_len, s_idx)) {
-        s_idx = PARSE_ARRAY_IDX;        token = token PARSE_ARRAY_VALUE
+function json_walk_value(s, s_len, s_idx,     c, token, idx){
+    if (json_walk_string(s, s_len, s_idx) == true) {    # key
+        s_idx = JSON_WALK_STRING_IDX;       token = token JSON_WALK_STRING_TOKEN
+    } else if (json_walk_primitive(s, s_len, s_idx) == true) {
+        s_idx = JSON_WALK_PRIMITIVE_IDX;    token = token JSON_WALK_PRIMITIVE_TOKEN
+    } else if (json_walk_dict(s, s_len, s_idx) == true) {
+        s_idx = JSON_WALK_DICT_IDX;         token = token JSON_WALK_DICT_TOKEN
+    } else if (json_walk_array(s, s_len, s_idx) == true) {
+        s_idx = JSON_WALK_ARRAY_IDX;        token = token JSON_WALK_ARRAY_TOKEN
     } else {
-        panic("Expect a value")
+        # panic("json_walk_value() Expect a value: ->" substr(s, s_idx, 10))
+        return false
     }
 
-    PARSE_VALUE_IDX = s_idx;    PARSE_VALUE_VALUE = token
+    JSON_WALK_VALUE_IDX = s_idx;    JSON_WALK_VALUE_TOKEN = token
+    return true
 }
 
-
-function walk(s,    c, o, s_idx, s_len, mode, token, stop_token){
-    s_len=length(s)
-    s_idx = 1
-
-    out=""
-    
-    while (s_idx <= s_len){
-        c = substr(s, s_idx, 1)
-
-        o = __ord__[c]
-        if (o <= 32) {
-            out = out c
-            continue
+function json_walk(s,       s_len, s_idx, token, idx){
+    s_len = length(s);      s_idx = 1
+    while (s_idx <= s_len) {
+        idx = s_idx
+        if (json_walk_empty(s, s_len, idx) == true) {     # optional
+            idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        if (c == "[") {
-            path_idx ++;  
-            mode = "array"; mode_path[path_idx] = mode
-            out=out c;  
-            continue
+        if (json_walk_value(s, s_len, idx) == true) {     # value
+            idx = JSON_WALK_VALUE_IDX;    token = token JSON_WALK_VALUE_TOKEN
+        } else {
+            debug("json_walk_value() Out")
+            break
         }
 
-        if (c == "]") {
-            path_idx --;
-            mode = mode_path[path_idx]
-            out = out c;
-            continue
+        if (json_walk_empty(s, s_len, idx) == true) {     # optional
+            idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        if (c == "{") {
-            path_idx ++
-            mode = "object"; mode_path[path_idx] = mode
-            out=out c
-            continue
+        if (s_idx == idx) {
+            panic("No parsing.")
         }
-
-        if (c == "}") {
-            path_idx --
-            mode = mode_path[path_idx]
-            out = out c
-            continue
-        }
-
-        if (c == "\""){ 
-            parse_string(s, s_len, s_idx)
-            s_idx = STRING_FINDER_IDX
-        }   
-
-        s_idx ++
-
-        out=out c
+        s_idx = idx
     }
-    print out
-}
 
-{ 
-    ALL_TEXT = ALL_TEXT $0
-    # print $0
-}
-
-END {
-    print ALL_TEXT
-    # walk(ALL_TEXT)
+    return token
 }

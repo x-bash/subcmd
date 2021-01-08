@@ -1,0 +1,7 @@
+BEGIN{
+    RS="\034"
+}
+
+{ 
+    print json_walk($0)
+}

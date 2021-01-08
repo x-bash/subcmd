@@ -11,9 +11,6 @@ function a_show(m){
 	print "msg" m("hi")
 }
 
-_[1,2,3]=1
-_[1,1,1]=3
-_[1,1,1,1]=4
 
 
 function _value(){
