@@ -1,0 +1,346 @@
+BEGIN{
+    # Path Module
+    path_idx = 0
+    key_path[path_idx] = "."
+    mode_path[path_idx] = "value"
+
+    # General module
+    false = 0
+    true = 1
+}
+
+# Ord module
+
+BEGIN {
+    ord_init()
+}
+
+function ord_init(    low, high, i, t)
+{
+    low = sprintf("%c", 7) # BEL is ascii 7
+    if (low == "\a") {    # regular ascii
+        low = 0
+        high = 127
+    } else if (sprintf("%c", 128 + 7) == "\a") {
+        # ascii, mark parity
+        low = 128
+        high = 255
+    } else {        # ebcdic(!)
+        low = 0
+        high = 255
+    }
+
+    for (i = low; i <= high; i++) {
+        t = sprintf("%c", i)
+        _ord_[t] = i
+    }
+}
+
+function ord(c){
+    return _ord_[c]
+}
+
+function str_startswith(s, tgt){
+    if (substr(s, 1, length(tgt)) == tgt) return true
+    return false
+}
+
+function char_at(s, idx) {
+    return substr(s, idx, 1)
+}
+
+function char_get(s) {
+    return char_at(s, 1)
+}
+
+function char_is_number(c,      o) {
+    o = __ord__[c]
+    if ( (o >= 48) && (o <= 57) ) {
+        return true
+    }
+    return false
+}
+
+function panic(msg){
+    print msg >"/dev/stderr"
+    exit 1
+}
+
+
+
+
+# PARSE_STRING_IDX = 0
+# PARSE_STRING_VALUE = ""
+function parse_string(c, s, s_len, s_idx,     token, slash){
+
+    if (c != "\"") {
+        return 1
+    }
+
+    token = c
+    slash = 0
+    while (s_idx < s_len) {
+        s_idx ++
+        c = substr(s, s_idx, 1)
+
+        if (c == "\"") {
+            token = token c
+            if (slash % 2 == 0) {
+                s_idx ++
+                break
+            }
+            slash = 0
+        }
+
+        if (c == "\\") {
+            slash ++
+        } else {
+            slash = 0
+        }
+        
+        token = token c
+    }
+
+    PARSE_STRING_IDX = s_idx
+    PARSE_STRING_VALUE = token
+
+    return 0
+}
+
+# PARSE_EMPTY_IDX = 0
+# PARSE_EMPTY_VALUE = ""
+function parse_empty(s, s_len, s_idx,     idx, o, token, slash){
+    token = ""
+    idx = s_idx
+    while (idx < s_len) {
+        c = substr(s, idx, 1)
+
+        if (__ord__[c] > 32) break
+            
+        token = token c
+        idx ++
+    }
+
+    PARSE_EMPTY_IDX = s_idx
+    PARSE_EMPTY_VALUE = token
+
+    if (idx == s_idx) {
+        return false
+    } else {
+        return true
+    }
+}
+
+
+# Handle 
+function parse_number(c, s, s_len, s_idx) {
+
+    PARSE_NUMBER_IDX = s_idx
+    PARSE_NUMBER_VALUE = ""
+
+    c = substr(s, idx, 1)
+    # 0 represent not found
+    if ( index("-0123456789e.", c) == 0 ) {
+        return false
+    }
+    idx ++
+
+    while (idx <= s_len) {
+        c = substr(s, idx, 1)
+        # 0 represent not found
+        if ( index("-0123456789e.", c) == 0 ) break
+        PARSE_NUMBER_VALUE = PARSE_NUMBER_VALUE c
+        idx ++
+    }
+
+    PARSE_NUMBER_IDX = idx
+}
+
+
+function parse_primitive(c, s, s_len, s_idx,     idx, token, slash){
+    PARSE_PRIMITIVE_IDX = idx;                  PARSE_PRIMITIVE_VALUE = ""
+
+    if ( str_startswith(s, "true") ) {
+        PARSE_PRIMITIVE_IDX = s_idx + 4;        PARSE_PRIMITIVE_VALUE = "true"
+    } else if ( str_startswith(s, "false") ) {
+        PARSE_PRIMITIVE_IDX = s_idx + 5;        PARSE_PRIMITIVE_VALUE = "false"
+    } else {
+        if (parse_number(c, s, s_len, s_idx) == false) {
+            return false
+        }
+        PARSE_PRIMITIVE_IDX = PARSE_NUMBER_IDX; PARSE_PRIMITIVE_VALUE = PARSE_NUMBER_VALUE
+    }
+
+    return true
+}
+
+# PARSE_EMPTY_IDX = 0
+# PARSE_EMPTY_VALUE = ""
+
+function parse_dict(s, s_len, s_idx,     c, token, idx){
+    PARSE_DICT_IDX = s_idx;     PARSE_DICT_VALUE = ""
+
+    c = substr(s, s_idx, 1)
+    if (c != "{") return false
+    s_idx ++;   token = c
+    
+    while (1) {
+        if (parse_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        }
+
+        if (parse_string(s, s_len, s_idx) == true) {    # key
+            s_idx = PARSE_STRING_IDX;   token = token PARSE_STRING_VALUE
+        } else {
+            panic("Exepect a key")
+        }
+
+        if (parse_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        }
+
+        if (parse_value(s, s_len, s_idx) == true) {     # value
+            s_idx = PARSE_VALUE_IDX;    token = token PARSE_VALUE_VALUE
+        } else {
+            panic("Exepect a value")
+        }
+
+        if (parse_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        }
+
+        c = char_at(s, s_idx)
+        if (c == "}") {
+            s_idx ++;   token = token c;  break
+        } else if (c == ",") {
+            s_idx ++;   token = token c;
+        } else {
+            panic("Exepect , or }")
+        }
+    }
+
+    PARSE_DICT_IDX = s_idx;     PARSE_DICT_VALUE = token
+}
+
+# PARSE_EMPTY_IDX = 0
+# PARSE_EMPTY_VALUE = ""
+
+function parse_array(s, s_len, s_idx,     c, token, idx){
+    PARSE_ARRAY_IDX = s_idx;    PARSE_ARRAY_VALUE = "";
+
+    c = substr(s, s_idx, 1)
+    if (c != "[") return false
+
+    token = c
+    s_idx ++
+
+    while (1) {
+        if (parse_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        }
+
+        if (parse_value(s, s_len, s_idx) == true) {     # value
+            s_idx = PARSE_VALUE_IDX;    token = token PARSE_VALUE_VALUE
+        } else {
+            panic("Exepect a value")
+        }
+
+        if (parse_empty(s, s_len, s_idx) == true) {     # optional
+            s_idx = PARSE_EMPTY_IDX;    token = token PARSE_EMPTY_VALUE
+        }
+
+        c = char_at(s, s_idx)
+        if (c == "]") {
+            s_idx ++;   token = token c;  break
+        } else if (c == ",") {
+            s_idx ++;   token = token c;
+        } else {
+            panic("Exepect , or ]")
+        }
+    }
+
+    PARSE_ARRAY_IDX = s_idx;    PARSE_ARRAY_VALUE = token
+}
+
+# string | primitive | dict | array
+function parse_value(s, s_len, s_idx,     c, token, idx){
+    if (parse_string(s, s_len, s_idx) == true) {    # key
+        s_idx = PARSE_STRING_IDX;       token = token PARSE_STRING_VALUE
+    } else if (parse_primitive(s, s_len, s_idx) == true) {
+        s_idx = PARSE_PRIMITIVE_IDX;    token = token PARSE_PRIMITIVE_VALUE
+    } else if (parse_dict(s, s_len, s_idx)) {
+        s_idx = PARSE_DICT_IDX;         token = token PARSE_DICT_VALUE
+    } else if (parse_array(s, s_len, s_idx)) {
+        s_idx = PARSE_ARRAY_IDX;        token = token PARSE_ARRAY_VALUE
+    } else {
+        panic("Expect a value")
+    }
+
+    PARSE_VALUE_IDX = s_idx;    PARSE_VALUE_VALUE = token
+}
+
+
+function walk(s,    c, o, s_idx, s_len, mode, token, stop_token){
+    s_len=length(s)
+    s_idx = 1
+
+    out=""
+    
+    while (s_idx <= s_len){
+        c = substr(s, s_idx, 1)
+
+        o = __ord__[c]
+        if (o <= 32) {
+            out = out c
+            continue
+        }
+
+        if (c == "[") {
+            path_idx ++;  
+            mode = "array"; mode_path[path_idx] = mode
+            out=out c;  
+            continue
+        }
+
+        if (c == "]") {
+            path_idx --;
+            mode = mode_path[path_idx]
+            out = out c;
+            continue
+        }
+
+        if (c == "{") {
+            path_idx ++
+            mode = "object"; mode_path[path_idx] = mode
+            out=out c
+            continue
+        }
+
+        if (c == "}") {
+            path_idx --
+            mode = mode_path[path_idx]
+            out = out c
+            continue
+        }
+
+        if (c == "\""){ 
+            parse_string(s, s_len, s_idx)
+            s_idx = STRING_FINDER_IDX
+        }   
+
+        s_idx ++
+
+        out=out c
+    }
+    print out
+}
+
+{ 
+    ALL_TEXT = ALL_TEXT $0
+    # print $0
+}
+
+END {
+    print ALL_TEXT
+    # walk(ALL_TEXT)
+}

@@ -17,7 +17,7 @@ _[1,1,1,1]=4
 
 
 function _value(){
-	print _[]
+	print _[ARG]
 }
 
 # Search 

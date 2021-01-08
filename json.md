@@ -23,6 +23,8 @@ json.cmd '
     get .key1.key2.key3 => :a
     set .key1.key2.key3 => :a
     cal :a + :c + :d => :f
+
+    
 '
 
 
