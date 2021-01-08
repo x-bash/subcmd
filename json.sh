@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-# . json.sh; json.extract
+# . json.sh; json_extract
 
 json_extract(){
     echo '{

@@ -54,26 +54,23 @@ function ord(c){
     return _ord_[c]
 }
 
-function str_startswith(s, tgt){
-    if (substr(s, 1, length(tgt)) == tgt) return true
-    return false
-}
-
-function char_at(s, idx) {
-    return substr(s, idx, 1)
-}
-
-# function char_get(s) {
-#     return char_at(s, 1)
+# function str_startswith(s, tgt){
+#     if (substr(s, 1, length(tgt)) == tgt) return true
+#     return false
 # }
 
-function char_is_number(c,      o) {
-    o = ord(c)
-    if ( (o >= 48) && (o <= 57) ) {
-        return true
-    }
-    return false
-}
+# function char_at(s, idx) {
+#     return substr(s, idx, 1)
+# }
+
+
+# function char_is_number(c,      o) {
+#     o = _ord_[c]
+#     if ( (o >= 48) && (o <= 57) ) {
+#         return true
+#     }
+#     return false
+# }
 
 function panic(msg){
     print msg >"/dev/stderr"
@@ -83,10 +80,10 @@ function panic(msg){
 
 
 function json_walk_string(s, s_len, s_idx,     c, token, slash){
-    debug("json_walk_string start() ")
-    c = char_at(s, s_idx)
+    # debug("json_walk_string start() ")
+    c = substr(s, s_idx, 1)
     if (c != "\"") {
-        debug("json_walk_string not right() ")
+        # debug("json_walk_string not right() ")
         return false
     }
 
@@ -94,34 +91,29 @@ function json_walk_string(s, s_len, s_idx,     c, token, slash){
     slash = 0
     while (s_idx < s_len) {
         s_idx ++
-        c = char_at(s, s_idx)
+        c = substr(s, s_idx, 1)
+
+        token = token c
 
         if (c == "\"") {
-            token = token c
-            debug("json_walk_string continue() " c " " slash " " token)
+            # debug("json_walk_string continue() " c " " slash " " token)
             if (slash % 2 == 0) {
                 s_idx ++
-                debug("json_walk_string break() " c " " slash " " token)
+                # debug("json_walk_string break() " c " " slash " " token)
                 break
             }
             slash = 0
-        }
-
-        if (c == "\\") {
+        } else if (c == "\\") {
             slash ++
         } else {
             slash = 0
         }
-
-        debug("json_walk_string continue() " c)
-        
-        token = token c
     }
 
     JSON_WALK_STRING_IDX = s_idx
     JSON_WALK_STRING_TOKEN = token
 
-    debug("json_walk_string end() ")
+    # debug("json_walk_string end() ")
 
     return true
 }
@@ -134,7 +126,7 @@ function json_walk_empty(s, s_len, s_idx,     idx, o, token, slash){
     while (idx < s_len) {
         c = substr(s, idx, 1)
 
-        if (ord(c) > 32) break
+        if (_ord_[c] > 32) break
         
         token = token c
         idx ++
@@ -143,7 +135,7 @@ function json_walk_empty(s, s_len, s_idx,     idx, o, token, slash){
     JSON_WALK_EMPTY_IDX = idx
     JSON_WALK_EMPTY_TOKEN = token
 
-    debug("json_walk_empty: " idx " --- " length(JSON_WALK_EMPTY_TOKEN))
+    # debug("json_walk_empty: " idx " --- " length(JSON_WALK_EMPTY_TOKEN))
 
     if (idx == s_idx) {
         return false
@@ -161,7 +153,7 @@ function json_walk_number(s, s_len, s_idx,      c) {
     c = substr(s, s_idx, 1)
     # 0 represent not found
     if ( index("-0123456789e.", c) == 0 ) {
-        debug("json_walk_number(): fail first letter: " c " " index("-0123456789e.", c) )
+        # debug("json_walk_number(): fail first letter: " c " " index("-0123456789e.", c) )
         return false
     }
 
@@ -169,8 +161,8 @@ function json_walk_number(s, s_len, s_idx,      c) {
     s_idx ++
 
     while (s_idx <= s_len) {
-        debug("json_walk_number(): " s_idx " " s_len " " c)
-        c = char_at(s, s_idx)
+        # debug("json_walk_number(): " s_idx " " s_len " " c)
+        c = substr(s, s_idx, 1)
         # 0 represent not found
         if ( index("-0123456789e.", c) == 0 ) break
         JSON_WALK_NUMBER_TOKEN = JSON_WALK_NUMBER_TOKEN c
@@ -178,7 +170,7 @@ function json_walk_number(s, s_len, s_idx,      c) {
     }
 
     JSON_WALK_NUMBER_IDX = s_idx
-    debug("json_walk_number end(): " JSON_WALK_NUMBER_TOKEN)
+    # debug("json_walk_number end(): " JSON_WALK_NUMBER_TOKEN)
 
     return true
 }
@@ -194,15 +186,15 @@ function json_walk_primitive(s, s_len, s_idx,     token, slash){
     }  else if ( substr(s, s_idx, 4) == "null" ) {
         JSON_WALK_PRIMITIVE_IDX = s_idx + 4;        JSON_WALK_PRIMITIVE_TOKEN = "null"
     }else {
-        debug("json_walk_primitive(): json_walk_number()" )
+        # debug("json_walk_primitive(): json_walk_number()" )
         if (json_walk_number(s, s_len, s_idx) == false) {
-            debug("json_walk_primitive(): json_walk_number()" )
+            # debug("json_walk_primitive(): json_walk_number()" )
             return false
         }
         JSON_WALK_PRIMITIVE_IDX = JSON_WALK_NUMBER_IDX; JSON_WALK_PRIMITIVE_TOKEN = JSON_WALK_NUMBER_TOKEN
     }
 
-    debug("json_walk_primitive(): " JSON_WALK_PRIMITIVE_TOKEN)
+    # debug("json_walk_primitive(): " JSON_WALK_PRIMITIVE_TOKEN)
 
     return true
 }
@@ -219,7 +211,10 @@ function json_walk_dict(s, s_len, s_idx,     c, token, idx){
             s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        if (json_walk_string(s, s_len, s_idx) == true) {    # key
+        c = substr(s, s_idx, 1)
+        if (c == "}") {
+            s_idx ++;   token = token c;  break
+        } else if (json_walk_string(s, s_len, s_idx) == true) {    # key
             s_idx = JSON_WALK_STRING_IDX;   token = token JSON_WALK_STRING_TOKEN
         } else {
             json_walk_panic("json_walk_dict() Expect a key", s, s_idx)
@@ -229,7 +224,7 @@ function json_walk_dict(s, s_len, s_idx,     c, token, idx){
             s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        c = char_at(s, s_idx)
+        c = substr(s, s_idx, 1)
         if (c == ":") {
             s_idx ++;   token = token c;
         } else {
@@ -250,18 +245,14 @@ function json_walk_dict(s, s_len, s_idx,     c, token, idx){
             s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        c = char_at(s, s_idx)
-        if (c == "}") {
-            s_idx ++;   token = token c;  break
-        } else if (c == ",") {
+        c = substr(s, s_idx, 1)
+        if (c == ",") {
             s_idx ++;   token = token c;
-        } else {
-            json_walk_panic("json_walk_dict() Expect , or }", s, s_idx)
         }
     }
 
     JSON_WALK_DICT_IDX = s_idx;     JSON_WALK_DICT_TOKEN = token
-    debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
+    # debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
     return true
 }
 
@@ -270,7 +261,7 @@ function json_walk_dict(s, s_len, s_idx,     c, token, idx){
 
 function json_walk_array(s, s_len, s_idx,     c, token, idx){
     
-    debug("json_walk_array start() ")
+    # debug("json_walk_array start() ")
     JSON_WALK_ARRAY_IDX = s_idx;    JSON_WALK_ARRAY_TOKEN = "";
 
     c = substr(s, s_idx, 1)
@@ -280,39 +271,34 @@ function json_walk_array(s, s_len, s_idx,     c, token, idx){
     s_idx ++
 
     while (1) {
-        debug("loop")
+        # debug("loop")
         if (json_walk_empty(s, s_len, s_idx) == true) {     # optional
             s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        debug("-> json_walk_value")
-
-        if (json_walk_value(s, s_len, s_idx) == true) {     # value
+        c = substr(s, s_idx, 1)
+        if (c == "]") {
+            s_idx ++;   token = token c;  break
+        } else if (json_walk_value(s, s_len, s_idx) == true) {     # value
             s_idx = JSON_WALK_VALUE_IDX;    token = token JSON_WALK_VALUE_TOKEN
         } else {
             json_walk_panic("json_walk_array() Expect a value", s, s_idx)
         }
 
-        debug("-> json_walk_empty")
-
         if (json_walk_empty(s, s_len, s_idx) == true) {     # optional
             s_idx = JSON_WALK_EMPTY_IDX;    token = token JSON_WALK_EMPTY_TOKEN
         }
 
-        debug("-> detect")
+        # debug("-> detect")
 
-        c = char_at(s, s_idx)
-        if (c == "]") {
-            s_idx ++;   token = token c;  break
-        } else if (c == ",") {
+        c = substr(s, s_idx, 1)
+        if (c == ",") {
             s_idx ++;   token = token c;
-        } else {
-            json_walk_panic("json_walk_array() Expect , or ]", s, s_idx)
         }
     }
 
     JSON_WALK_ARRAY_IDX = s_idx;    JSON_WALK_ARRAY_TOKEN = token
-    debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
+    # debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
     return true
 }
 
@@ -352,7 +338,7 @@ function json_walk(s,       s_len, s_idx, token, idx){
         if (json_walk_value(s, s_len, idx) == true) {     # value
             idx = JSON_WALK_VALUE_IDX;    token = token JSON_WALK_VALUE_TOKEN
         } else {
-            debug("json_walk_value() Out -> " s_idx " : " )
+            # debug("json_walk_value() Out -> " s_idx " : " )
             break
         }
 
