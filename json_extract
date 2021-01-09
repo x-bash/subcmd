@@ -4,18 +4,18 @@ BEGIN{
 
 { 
 
-    sim = substr($0, 1)
-    gsub("\\\\", "__", sim)
-    gsub(/\\"/, "_", sim)
-    # gsub("\"[^"]*\"", " ", sim)
-    gsub(/[0-9.+-eE]/, "0", sim)
-    # gsub(/[:unprint:]/)
-    s = gsub(/[\t\b\n\r\v]/, " ", sim)
+    # sim = substr($0, 1)
+    # gsub("\\\\", "__", sim)
+    # gsub(/\\"/, "_", sim)
+    # # gsub("\"[^"]*\"", " ", sim)
+    # gsub(/[0-9.+-eE]/, "0", sim)
+    # # gsub(/[:unprint:]/)
+    # s = gsub(/[\t\b\n\r\v]/, " ", sim)
     # s = gsub(/\#./, " ", $0)
 
-    print(sim)
-    print (s)
+    # print(sim)
+    # print (s)
     # print(s)
-    # json_walk($0)
+    json_walk($0)
     # print($0)
 }
