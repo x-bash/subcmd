@@ -22,6 +22,7 @@ function json_walk_string(     pos){
     }
 
     s_idx ++
+    # match(substr(s, s_idx), /[^"]+"/);    pos = RLENGTH  # index() is no way better then match()
     pos = index(substr(s, s_idx), "\"")
     if (pos <= 0) json_walk_panic("json_walk_string() Expect \"")
     result = substr(text, s_idx-1, pos+1)
@@ -29,68 +30,43 @@ function json_walk_string(     pos){
     return true
 }
 
-# function json_walk_empty(){
-#     if (substr(s, s_idx, 1) != " ") return false
-#     match(substr(s, s_idx, 16), /^ +/)
-#     if (RLENGTH <= 0) return false
-#     if (RLENGTH == 16) {
-#         s_idx += RLENGTH
-#         match(substr(s, s_idx), /^ +/)
-#     }
-#     if (RLENGTH > 0) s_idx += RLENGTH
-#     result = substr(text, s_idx, RLENGTH)
-#     return true
-# }
-
-function json_walk_empty(){
-    if (substr(s, s_idx, 1) != " ") return false
-    match(substr(s, s_idx), /^ +/)
+function json_walk_empty(   o_idx){
+    # if (substr(s, s_idx, 1) != " ") return false
+    match(substr(s, s_idx, 16), /^ +/)
     if (RLENGTH <= 0) return false
-    result = substr(text, s_idx, RLENGTH)
-    s_idx += RLENGTH
+    o_idx = s_idx
+    if (RLENGTH == 16) {   
+        s_idx += 16
+        match(substr(s, s_idx), /^ +/)
+    }
+    if (RLENGTH > 0) s_idx += RLENGTH
+    result = substr(text, o_idx, s_idx - o_idx)
     return true
 }
 
-# JSON_WALK_EMPTY_IDX = 0
-# JSON_WALK_EMPTY_TOKEN = ""
-# function json_walk_empty(   c, o_idx){
-#     o_idx = s_idx
-#     while (s_idx < s_len) {
-#         if (substr(s, s_idx, 1) != " ") break
-#         s_idx ++
-#     }
-
-#     if (s_idx == o_idx) return false
-
-#     result = substr(text, o_idx, s_idx - o_idx)
-#     return true
-# }
-
 function json_walk_number(      o_idx) {
-    if (substr(s, s_idx, 1) != "0") return false
-    match(substr(s, s_idx), /^0+/)
+    # if (substr(s, s_idx, 1) != "0") return false
+    match(substr(s, s_idx, 8), /^0+/)
     if (RLENGTH <= 0) return false
-    result = substr(text, s_idx, RLENGTH)
-    s_idx += RLENGTH
+    o_idx = s_idx
+    if (RLENGTH == 8) {
+        s_idx += 8
+        match(substr(s, s_idx), /^0+/)
+    }
+    if (RLENGTH > 0)   s_idx += RLENGTH
+    result = substr(text, o_idx, s_idx - o_idx)
     # debug("json_walk_number() return true " RLENGTH)
     return true
 }
 
-# function json_walk_number(      o_idx) {
-#     o_idx = s_idx
-#     while (s_idx < s_len) {
-#         if (substr(s, s_idx, 1) != "0") break
-#         s_idx ++
-#     }
-    
-#     if (s_idx == o_idx) return false
-#     result = substr(text, o_idx, s_idx - o_idx)
-#     return true
-# }
-
 function json_walk_primitive(     tmps){
+    if (json_walk_number() == true) {
+        return true
+    }
+
     # true => tru0, false => fals0
     tmps = substr(s, s_idx, 4)
+
     if (tmps == "tru0") {
         result = "true"
         s_idx += 4
@@ -101,12 +77,7 @@ function json_walk_primitive(     tmps){
         result = "false"
         s_idx += 5;
     } else {
-        # debug("json_walk_primitive(): json_walk_number() " )
-        if (json_walk_number() == false) {
-            # debug("json_walk_primitive() fails after json_walk_number()" )
-            return false
-        }
-        # result = result
+       return false
     }
     return true
 }
