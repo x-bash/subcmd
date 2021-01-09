@@ -1,5 +1,6 @@
 BEGIN{
     false = 0;      true = 1
+    enable_comment_parsing = false
 }
 
 function debug(msg){
@@ -30,19 +31,64 @@ function json_walk_string(     pos){
     return true
 }
 
-function json_walk_empty(   o_idx){
+function json_walk_empty(   sw, o_idx, oo_idx){
+    if (enable_comment_parsing == false) {
+        return json_walk_empty0()
+    }
+
+    sw = false
+    oo_idx = s_idx
+    while (1) {
+        o_idx = s_idx
+        json_walk_empty0()
+        json_walk_comment()
+        if (o_idx == s_idx) break
+        sw = true
+    }
+
+    if (sw == true) {
+        result = substr(text, oo_idx, s_idx - oo_idx)
+    }
+    return sw
+}
+
+function json_walk_comment(     ss, pos){
+    ss = substr(s, s_idx, 2)
+    # debug("json_walk_comment() starts ->" ss)
+    if (( ss == "//") || (substr(s, s_idx, 1) == "#") ) {
+        pos = index(substr(s, s_idx), "\n")
+        if (pos <= 0) {
+            s_idx = s_len + 1
+        } else {
+            s_idx += pos
+        }
+        
+        return true
+    }
+
+    if ( ss == "/*" ) {
+        pos = index(substr(s, s_idx), "*/")
+        if (pos <= 0) json_walk_panic("json_walk_comment() Expect */")
+        s_idx += pos + 1    # Notice "*/"
+        return true
+    }
+    return false
+}
+
+function json_walk_empty0(   o_idx){
     # if (substr(s, s_idx, 1) != " ") return false
-    match(substr(s, s_idx, 16), /^ +/)
+    match(substr(s, s_idx, 16), /^[ \n]+/)
     if (RLENGTH <= 0) return false
     o_idx = s_idx
     if (RLENGTH == 16) {   
         s_idx += 16
-        match(substr(s, s_idx), /^ +/)
+        match(substr(s, s_idx), /^[ \n]+/)
     }
     if (RLENGTH > 0) s_idx += RLENGTH
     result = substr(text, o_idx, s_idx - o_idx)
     return true
 }
+
 
 function json_walk_number(      o_idx) {
     # if (substr(s, s_idx, 1) != "0") return false
@@ -239,7 +285,7 @@ function json_walk(text_to_parsed,   b_s, b_s_idx, b_s_len, b_text, b_result){
     gsub(/\\"/, "__", s)
     gsub(/[0123456789eE\.\+\-]/, 0, s) # number value
     
-    gsub(/[\t\b\n\r\v]/, " ", s)
+    gsub(/[\t\b\r\v]/, " ", s)
 
     _json_walk()
 
