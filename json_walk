@@ -235,9 +235,10 @@ function json_walk(text_to_parsed,   b_s, b_s_idx, b_s_len, b_text, b_result){
     b_result = result;  b_text = text;          b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
     result = "";        text = text_to_parsed;  s = text;   s_idx = 1;          s_len = length(s)
 
-    gsub("\\\\", "__", s)
-    gsub(/\\"/, "_", s)
+    gsub(/\\\\/, "__", s)
+    gsub(/\\"/, "__", s)
     gsub(/[0123456789eE\.\+\-]/, 0, s) # number value
+    
     gsub(/[\t\b\n\r\v]/, " ", s)
 
     _json_walk()
