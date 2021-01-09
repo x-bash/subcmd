@@ -3,13 +3,13 @@ BEGIN{
 }
 
 function debug(msg){
-	print "DEBUG:" msg > "/dev/stderr"
+	print "idx[" s_idx "]  DEBUG:" msg > "/dev/stderr"
 }
 
 function json_walk_panic(msg,       start){
     start = s_idx - 10
     if (start <= 0) start = 1
-    print (msg " [index=" s_idx "]:\n-------------------\n" substr(s, start, 30) "\n-------------------") > "/dev/stderr"
+    print (msg " [index=" s_idx "]:\n-------------------\n" substr(s, start, s_idx - start)  "|"  substr(s, s_idx, 1) "|" substr(s, s_idx+1, 30) "\n-------------------") > "/dev/stderr"
     exit 1
 }
 
@@ -24,21 +24,25 @@ function json_walk_string(     pos){
     s_idx ++
     pos = index(substr(s, s_idx), "\"")
     if (pos <= 0) json_walk_panic("json_walk_string() Expect \"")
+    result = substr(text, s_idx-1, pos+1)
     s_idx += pos
     return true
 }
 
 function json_walk_empty(){
     match(substr(s, s_idx), /^ +/)
-    if (RLENGTH == 0) return false
+    if (RLENGTH <= 0) return false
+    result = substr(text, s_idx, RLENGTH)
     s_idx += RLENGTH
     return true
 }
 
 function json_walk_number(      o_idx) {
     match(substr(s, s_idx), /^0+/)
-    if (RLENGTH == 0) return false
+    if (RLENGTH <= 0) return false
+    result = substr(text, s_idx, RLENGTH)
     s_idx += RLENGTH
+    # debug("json_walk_number() return true " RLENGTH)
     return true
 }
 
@@ -46,93 +50,113 @@ function json_walk_primitive(     tmps){
     # true => tru0, false => fals0
     tmps = substr(s, s_idx, 4)
     if (tmps == "tru0") {
+        result = "true"
         s_idx += 4
     } else if (tmps == "null") {
+        result = "null"
         s_idx += 4
     } else if ( substr(s, s_idx, 5) == "fals0" ) {
+        result = "false"
         s_idx += 5;
     } else {
-        # debug("json_walk_primitive(): json_walk_number()" )
+        # debug("json_walk_primitive(): json_walk_number() " )
         if (json_walk_number() == false) {
-            # debug("json_walk_primitive(): json_walk_number()" )
+            # debug("json_walk_primitive() fails after json_walk_number()" )
             return false
         }
+        # result = result
     }
     return true
 }
 
-function json_walk_dict(){
-    if (substr(s, s_idx, 1) != "{") return false
+function json_walk_dict(    ret){
+    if (substr(s, s_idx, 1) != "{") {
+        # debug("json_walk_dict() fails" )
+        return false
+    }
+    ret = ret "{"
     s_idx ++;
     
     while (1) {
         if (json_walk_empty() == true) {     # optional
-            # s_idx = JSON_WALK_EMPTY_IDX;
+            ret = ret result
         }
 
         if (substr(s, s_idx, 1) == "}") {
+            ret = ret "}"
             s_idx ++;  break
         } else if (json_walk_string() == false) {    # key
             json_walk_panic("json_walk_dict() Expect a key")
         }
-        # TO_ADD: consume the key
+        ret = ret result
 
         if (json_walk_empty() == true) {     # optional
-            # s_idx = JSON_WALK_EMPTY_IDX;
+            ret = ret result
         }
 
         if (substr(s, s_idx, 1) == ":") {
+            ret = ret ":"
             s_idx ++;
         } else {
             json_walk_panic("json_walk_dict() Expect :")
         }
 
         if (json_walk_empty() == true) {     # optional
-            # TODO: stringify
+            ret = ret result
         }
 
         if (json_walk_value() == false) {     # value
             json_walk_panic("json_walk_dict() Expect a value")
         }
-        # TODO: consume value
+        ret = ret result
 
         if (json_walk_empty() == true) {     # optional
-            # TODO: stringify
+            ret = ret result
         }
 
         if (substr(s, s_idx, 1) == ",") {
+            ret = ret ","
             s_idx ++;
         }
     }
+
     # debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
+    result = ret
     return true
 }
 
-function json_walk_array(){
+function json_walk_array(       ret){
     # debug("json_walk_array start() ")
     if (substr(s, s_idx, 1) != "[") return false
+    ret = "["
     s_idx ++
 
     while (1) {
         # debug("loop")
         if (json_walk_empty() == true) {   # optional
+            ret = ret result
         }
 
         if (substr(s, s_idx, 1) == "]") {
+            ret = ret "]"
             s_idx ++;  break
         } else if (json_walk_value() == true) {     # value
-            # TODO: parse value, callback value
+            ret = ret result
         } else {
             json_walk_panic("json_walk_array() Expect a value")
         }
 
         if (json_walk_empty() == true) {     # optional
-            # s_idx = JSON_WALK_EMPTY_IDX;
+            ret = ret result
         }
 
-        if (substr(s, s_idx, 1) == ",") s_idx ++;
+        if (substr(s, s_idx, 1) == ",") {
+            ret = ret ","
+            s_idx ++;
+        }
     }
     # debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
+    result = ret
     return true
 }
 
@@ -165,6 +189,7 @@ function json_walk_cb(s, idx0, idx1){
 
 function _json_walk(    idx){
     while (s_idx <= s_len) {
+        print("-->" s_idx " " idx)
         idx = s_idx
         
         if (json_walk_empty() == true) {     # optional
@@ -172,9 +197,12 @@ function _json_walk(    idx){
         }
 
         if (json_walk_value() == false) {
-            debug("json_walk_value() Out -> " s_idx " : " )
-            break
+            # debug("json_walk_value() Out -> " s_idx " : " )
+            # break
+            return
         }
+        print(s_idx " " idx)
+        print("1: " result)
         # consume value: Do some thing in stringify()
 
         if (json_walk_empty() == true) {     # optional
@@ -182,24 +210,24 @@ function _json_walk(    idx){
         }
 
         if (s_idx == idx) {
-           json_walk_panic("json_walk() Expect a value")
+            json_walk_panic("json_walk() Expect a value")
         }
-
-        # json_walk_cb(s, idx, s_idx)
+        
+            # json_walk_cb(s, idx, s_idx)
     }
 }
 
 # global variable: text, s, s_idx, s_len
 function json_walk(text_to_parsed,   b_s, b_s_idx, b_s_len, b_text, b_result){
     b_result = result;  b_text = text;          b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
-    result = ""         text = text_to_parsed;  s = text;   s_idx = 1;          s_len = length(s)
+    result = "";        text = text_to_parsed;  s = text;   s_idx = 1;          s_len = length(s)
 
     gsub("\\\\", "__", s)
     gsub(/\\"/, "_", s)
-    gsub(/[0-9.+-eE]/, "0", s) # number value
+    gsub(/[0123456789eE\.\+\-]/, 0, s) # number value
+    gsub(/[\t\b\n\r\v]/, " ", s)
 
     _json_walk()
-    print (result)
 
     result = b_result;  text = b_text;  s = b_s;    s_idx = b_s_idx;    s_len = b_s_len;
 }
