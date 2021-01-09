@@ -68,7 +68,7 @@ function json_walk_empty(){
 
 function json_walk_number(      o_idx) {
     if (substr(s, s_idx, 1) != "0") return false
-    match(substr(s, s_idx, 8), /^0+/)
+    match(substr(s, s_idx), /^0+/)
     if (RLENGTH <= 0) return false
     result = substr(text, s_idx, RLENGTH)
     s_idx += RLENGTH
