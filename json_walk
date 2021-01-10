@@ -1,6 +1,7 @@
 BEGIN{
     false = 0;      true = 1
-    enable_comment_parsing = false
+    enable_comment_parsing = true
+    out_compact = false;            out_indent = false
 }
 
 function debug(msg){
@@ -33,7 +34,14 @@ function json_walk_string(     pos){
 
 function json_walk_empty(   sw, o_idx, oo_idx){
     if (enable_comment_parsing == false) {
-        return json_walk_empty0()
+        o_idx = s_idx
+        sw = json_walk_empty0()
+        if (out_compact == true) {
+            result = ""
+        } else {
+            result = substr(text, o_idx, s_idx - o_idx)
+        }
+        return sw
     }
 
     sw = false
@@ -47,7 +55,11 @@ function json_walk_empty(   sw, o_idx, oo_idx){
     }
 
     if (sw == true) {
-        result = substr(text, oo_idx, s_idx - oo_idx)
+        if (out_compact == true) {
+            result = ""
+        } else {
+            result = substr(text, oo_idx, s_idx - oo_idx)
+        }
     }
     return sw
 }
@@ -85,10 +97,8 @@ function json_walk_empty0(   o_idx){
         match(substr(s, s_idx), /^[ \n]+/)
     }
     if (RLENGTH > 0) s_idx += RLENGTH
-    result = substr(text, o_idx, s_idx - o_idx)
     return true
 }
-
 
 function json_walk_number(      o_idx) {
     # if (substr(s, s_idx, 1) != "0") return false
@@ -128,11 +138,14 @@ function json_walk_primitive(     tmps){
     return true
 }
 
-function json_walk_dict(    ret){
+function json_walk_dict(    ret, nth){
     if (substr(s, s_idx, 1) != "{") {
         # debug("json_walk_dict() fails" )
         return false
     }
+    
+    JSON_WALK_KP_IDX ++
+
     ret = ret "{"
     s_idx ++;
     
@@ -142,12 +155,16 @@ function json_walk_dict(    ret){
         }
 
         if (substr(s, s_idx, 1) == "}") {
+            JSON_WALK_KP_IDX --
             ret = ret "}"
             s_idx ++;  break
-        } else if (json_walk_string() == false) {    # key
-            json_walk_panic("json_walk_dict() Expect a key")
+        } else {
+            if (json_walk_string() == false) {    # key
+                json_walk_panic("json_walk_dict() Expect a key")
+            }
+            JSON_WALK_KP[JSON_WALK_KP_IDX] = result
+            ret = ret result
         }
-        ret = ret result
 
         if (json_walk_empty() == true) {     # optional
             ret = ret result
@@ -184,12 +201,14 @@ function json_walk_dict(    ret){
     return true
 }
 
-function json_walk_array(       ret){
+function json_walk_array(       ret, nth){
     # debug("json_walk_array start() ")
     if (substr(s, s_idx, 1) != "[") return false
+
+    JSON_WALK_KP_IDX ++;    nth = -1
     ret = "["
     s_idx ++
-
+    
     while (1) {
         # debug("loop")
         if (json_walk_empty() == true) {   # optional
@@ -197,12 +216,17 @@ function json_walk_array(       ret){
         }
 
         if (substr(s, s_idx, 1) == "]") {
+            JSON_WALK_KP_IDX --
             ret = ret "]"
             s_idx ++;  break
-        } else if (json_walk_value() == true) {     # value
-            ret = ret result
         } else {
-            json_walk_panic("json_walk_array() Expect a value")
+            nth++;      JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
+
+            if (json_walk_value() == true) {     # value
+                ret = ret result
+            } else {
+                json_walk_panic("json_walk_array() Expect a value")
+            }
         }
 
         if (json_walk_empty() == true) {     # optional
@@ -246,14 +270,19 @@ function json_walk_cb(s, idx0, idx1){
     print("---", idx1 substr(s, idx0, idx1 - idx0))
 }
 
-function _json_walk(    idx){
+function _json_walk(    idx, nth){
+
+    nth = -1
     while (s_idx <= s_len) {
-        print("-->" s_idx " " idx)
+
         idx = s_idx
         
         if (json_walk_empty() == true) {     # optional
             # Do some thing in stringify()
         }
+
+        nth ++;     JSON_WALK_KP_IDX = 1
+        JSON_WALK_KP[1] = nth
 
         if (json_walk_value() == false) {
             # debug("json_walk_value() Out -> " s_idx " : " )
@@ -277,9 +306,14 @@ function _json_walk(    idx){
 }
 
 # global variable: text, s, s_idx, s_len
-function json_walk(text_to_parsed,   b_s, b_s_idx, b_s_len, b_text, b_result){
-    b_result = result;  b_text = text;          b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
-    result = "";        text = text_to_parsed;  s = text;   s_idx = 1;          s_len = length(s)
+function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
+    b_result = result;  b_text = text;
+    b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
+    
+    result = "";        text = text_to_parsed;  
+    s = text;   s_idx = 1;          s_len = length(s)
+    
+    JSON_WALK_KP_IDX = 0
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)
