@@ -1,6 +1,6 @@
 BEGIN{
     false = 0;      true = 1
-    enable_comment_parsing = true
+    enable_comment_parsing = false
     out_compact = false;            out_indent = false
 }
 
@@ -314,6 +314,8 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
     s = text;   s_idx = 1;          s_len = length(s)
     
     JSON_WALK_KP_IDX = 0
+
+    if ( out_indent != false ) out_compact = true
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)
