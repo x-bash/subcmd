@@ -1,9 +1,10 @@
 BEGIN{
     false = 0;      true = 1
-    enable_comment_parsing = true
+    enable_comment_parsing = false
     out_compact = false;
     out_format = true;  # Using compilation switch to enable or disable code
     out_indent_step = 2
+    out_color = true
 }
 
 function debug(msg){
@@ -29,7 +30,11 @@ function json_walk_string(     pos){
     # match(substr(s, s_idx), /[^"]+"/);    pos = RLENGTH  # index() is no way better then match()
     pos = index(substr(s, s_idx), "\"")
     if (pos <= 0) json_walk_panic("json_walk_string() Expect \"")
+
+    # if.def stringify
     result = substr(text, s_idx-1, pos+1)
+    # end.if
+
     s_idx += pos
     return true
 }
@@ -173,6 +178,11 @@ function json_walk_dict(    ret, nth){
                 json_walk_panic("json_walk_dict() Expect a key")
             }
             JSON_WALK_KP[JSON_WALK_KP_IDX] = result
+
+            # if.def color
+            if (out_color == true) result = "\033[1;35m" result "\033[0m"
+            # end.if
+
             if (out_format == true) {
                 ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) result
             } else {
@@ -202,6 +212,7 @@ function json_walk_dict(    ret, nth){
         if (json_walk_value() == false) {     # value
             json_walk_panic("json_walk_dict() Expect a value")
         }
+
         ret = ret result
 
         if (json_walk_empty() == true) {     # optional
@@ -281,8 +292,13 @@ function json_walk_value(     o_idx){
     o_idx = s_idx
 
     if (json_walk_string() == true) {    # key
-        # JSON_WALK_STRING_TOKEN = json_walk_cb_value(JSON_WALK_STRING_TOKEN)
+        # if.def color
+        if (out_color == true) result = "\033[0;32m" result "\033[0m"
+        # end.if
     } else if (json_walk_primitive() == true) {
+        # if.def color
+        if (out_color == true) result = "\033[1;33m" result "\033[0m"
+        # end.if
         # s_idx = JSON_WALK_PRIMITIVE_IDX;
     } else if (json_walk_dict() == true) {
         # s_idx = JSON_WALK_DICT_IDX;
