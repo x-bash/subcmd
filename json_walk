@@ -1,7 +1,9 @@
 BEGIN{
     false = 0;      true = 1
-    enable_comment_parsing = false
-    out_compact = false;            out_indent = false
+    enable_comment_parsing = true
+    out_compact = false;
+    out_format = true;  # Using compilation switch to enable or disable code
+    out_indent_step = 2
 }
 
 function debug(msg){
@@ -144,26 +146,38 @@ function json_walk_dict(    ret, nth){
         return false
     }
     
-    JSON_WALK_KP_IDX ++
-
+    JSON_WALK_KP_IDX ++;    nth = -1
     ret = ret "{"
     s_idx ++;
     
     while (1) {
+        nth ++
         if (json_walk_empty() == true) {     # optional
             ret = ret result
         }
 
         if (substr(s, s_idx, 1) == "}") {
             JSON_WALK_KP_IDX --
-            ret = ret "}"
+            if (out_format == true) {
+                if (nth == 0) {
+                    ret = ret " }"
+                } else {
+                    ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "}"
+                }
+            } else {
+                ret = ret "\n}"
+            }
             s_idx ++;  break
         } else {
             if (json_walk_string() == false) {    # key
                 json_walk_panic("json_walk_dict() Expect a key")
             }
             JSON_WALK_KP[JSON_WALK_KP_IDX] = result
-            ret = ret result
+            if (out_format == true) {
+                ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) result
+            } else {
+                ret = ret result
+            }
         }
 
         if (json_walk_empty() == true) {     # optional
@@ -171,7 +185,11 @@ function json_walk_dict(    ret, nth){
         }
 
         if (substr(s, s_idx, 1) == ":") {
-            ret = ret ":"
+            if (out_format == true) {
+                ret = ret ": "
+            } else {
+                ret = ret ":"
+            }
             s_idx ++;
         } else {
             json_walk_panic("json_walk_dict() Expect :")
@@ -210,6 +228,8 @@ function json_walk_array(       ret, nth){
     s_idx ++
     
     while (1) {
+        nth++;
+        
         # debug("loop")
         if (json_walk_empty() == true) {   # optional
             ret = ret result
@@ -217,15 +237,24 @@ function json_walk_array(       ret, nth){
 
         if (substr(s, s_idx, 1) == "]") {
             JSON_WALK_KP_IDX --
-            ret = ret "]"
-            s_idx ++;  break
-        } else {
-            nth++;      JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
-
-            if (json_walk_value() == true) {     # value
-                ret = ret result
+            if (out_format == true) {
+                if (nth == 0) {
+                    ret = ret " ]"
+                } else {
+                    ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "]"
+                }
             } else {
-                json_walk_panic("json_walk_array() Expect a value")
+                ret = ret "]"
+            }
+            s_idx ++;   break
+        } else {
+            JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
+
+            if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
+            if (out_format == true) {   # value
+                ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) result
+            } else {
+                ret = ret result
             }
         }
 
@@ -289,8 +318,8 @@ function _json_walk(    idx, nth){
             # break
             return
         }
-        print(s_idx " " idx)
-        print("1: " result)
+
+        print(result)
         # consume value: Do some thing in stringify()
 
         if (json_walk_empty() == true) {     # optional
@@ -315,7 +344,7 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
     
     JSON_WALK_KP_IDX = 0
 
-    if ( out_indent != false ) out_compact = true
+    if ( out_format != false ) out_compact = true
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)
