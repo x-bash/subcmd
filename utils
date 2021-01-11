@@ -1,36 +1,17 @@
 
-function parse_array_exit(jpath, status) { #{{{1
-	cb("world")
-}
-
 function debug(msg){
 	print msg > "/dev/stderr"
 }
 
-function a_show(m){
-	print "msg" m("hi")
+function char_at(s, idx) {
+    return substr(s, idx, 1)
 }
 
-
-
-function _value(){
-	print _[ARG]
-}
-
-# Search 
-function _len(){
-	
-}
-
-function _q(){
-
-}
-
-function _keys(){
-
-}
-
-function _type(){
-
+function char_is_number(c,      o) {
+    o = _ord_[c]
+    if ( (o >= 48) && (o <= 57) ) {
+        return true
+    }
+    return false
 }
 

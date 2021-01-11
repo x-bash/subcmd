@@ -1616,7 +1616,7 @@
                 "repos_url": "https://gitee.com/api/v5/users/edwinjhlee/repos",
                 "events_url": "https://gitee.com/api/v5/users/edwinjhlee/events{/privacy}",
                 "received_events_url": "https://gitee.com/api/v5/users/edwinjhlee/received_events",
-                "type": "User"
+                "type": "User\""
             }
         ]
     }

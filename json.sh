@@ -2,25 +2,60 @@
 
 # . json.sh; json_extract
 
+# jq . <<< '{
+#     "aa": true,
+#     "a": "1\"\\",
+#     "c": -1.3,
+#     "b": [1, 2, 3],
+#     "c": [ { "member": 1} ],
+#     "d": { },
+#     "5": {
+#         "a": 1
+#     }
+# }'
+
 json_extract(){
-    echo '{
+    json_main <<< '{
+    a: fff, 
     "aa": true,
-    "a": "1",
+    "aa1": false,
+    "a": "1\"\\",   // hi
+    "c": -1.3,      /* hello */
+    # hello
     "b": [1, 2, 3],
-    "c": [ ],
+    "c": [ { "member": 1} ],
     "d": { },
     "5": {
         "a": 1
     }
-}' | json_main
+}'
 }
 
+# . json.sh; time json_main  <test-data/b.json >/dev/null
 # . json.sh; time cat test-data/b.json | json_main
 
 json_main(){
-    local code
-    code=$(cat "./json_walk" "./json_extract")
-    awk "$code" -
+    awk "$(cat "./json_walk" "./json_extract")" -
 }
 
+
+json_acc(){
+    # awk "$(cat "./json_acc")" -
+    awk -f ./json_acc -
+}
+
+json_acc0(){
+    json_acc <<< '{
+    "aa": true,
+    "aa1": false,
+    "a": "1\"\\",
+    "c": -1.3,
+    "b": [1, 2, 3],
+    "c": [ { "member": 1} ],
+    "d": { },
+    "5": {
+        "a": 1
+    }
+}'
+}
 

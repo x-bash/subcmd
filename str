@@ -1,5 +1,11 @@
 BEGIN{ str_init() }
 
+# If you cares about performance, don't use.
+function str_startswith(s, tgt){
+    if (substr(s, 1, length(tgt)) == tgt) return true
+    return false
+}
+
 function str_init(i) {
 	__CHAR[0] = "\0"
 	__CHAR[1] = "\1"
@@ -343,3 +349,5 @@ function _str_unescape(s,   i, s2, c, u, h) {
 	s2 = s2 s
 	return s2
 }
+
+
