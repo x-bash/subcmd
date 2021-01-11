@@ -1,5 +1,8 @@
 BEGIN{
     false = 0;      true = 1
+
+    RS="\034"
+
     enable_comment_parsing = false
     out_compact = true;
     out_color = true
@@ -12,20 +15,6 @@ BEGIN{
     out_color_null = "\033[0;33m"   # "\033[0;31m"
     out_color_true = "\033[7;32m"
     out_color_false = "\033[7;31m"
-
-    # out_color_key = "\033[1;34m"
-    # out_color_string = "\033[0;33m"
-    # out_color_number = "\033[1;35m"
-    # out_color_null = "\033[0;31m"
-    # out_color_true = "\033[7;32m"
-    # out_color_false = "\033[7;31m"
-
-    # out_color_key = "\033[1;33m"
-    # out_color_string = "\033[0;34m"
-    # out_color_number = "\033[0;35m"
-    # out_color_null = "\033[0;31m"
-    # out_color_true = "\033[7;32m"
-    # out_color_false = "\033[7;31m"
 }
 
 function debug(msg){
@@ -396,17 +385,22 @@ function _json_walk(    idx, nth){
 function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
     b_result = result;  b_text = text;
     b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
-    
+
     result = "";        text = text_to_parsed;  
 
-    gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\000-\037]*((\\[^u\000-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\000-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
-	gsub("\n" "[ \t\n\r]+", "\n", text)
+    if ( out_format != false ) out_compact = true
+
+    if (out_compact == true) {
+        gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\000-\037]*((\\[^u\000-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\000-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
+	    gsub("\n" "[ \t\n\r]+", "\n", text)
+    }
+
 
     s = text;   s_idx = 1;          s_len = length(s)
     
     JSON_WALK_KP_IDX = 0
 
-    if ( out_format != false ) out_compact = true
+    
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)
@@ -418,4 +412,8 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
 
     result = b_result;  
     text = b_text;  s = b_s;    s_idx = b_s_idx;    s_len = b_s_len;
+}
+
+{
+    json_walk($0)
 }

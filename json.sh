@@ -35,7 +35,7 @@ json_extract(){
 # . json.sh; time cat test-data/b.json | json_main
 
 json_main(){
-    awk "$(cat "./json_walk" "./json_extract")" -
+    awk "$(cat "./json_walk")" -
 }
 
 
@@ -57,5 +57,43 @@ json_acc0(){
         "a": 1
     }
 }'
+}
+
+
+# Scheme 1:
+# out_color_key = "\033[0;35m"
+# out_color_string = "\033[0;34m"
+# out_color_number = "\033[0;32m"
+# out_color_null = "\033[0;33m"   # "\033[0;31m"
+# out_color_true = "\033[7;32m"
+# out_color_false = "\033[7;31m"
+
+# Scheme 2:
+# out_color_key = "\033[1;34m"
+# out_color_string = "\033[0;33m"
+# out_color_number = "\033[1;35m"
+# out_color_null = "\033[0;31m"
+# out_color_true = "\033[7;32m"
+# out_color_false = "\033[7;31m"
+
+# Scheme 3:
+# out_color_key = "\033[1;33m"
+# out_color_string = "\033[0;34m"
+# out_color_number = "\033[0;35m"
+# out_color_null = "\033[0;31m"
+# out_color_true = "\033[7;32m"
+# out_color_false = "\033[7;31m"
+
+json.awk.color1(){
+    local IFS=$' '
+    A=(
+    -v out_color_key="\033[0;35m"
+    -v out_color_string="\033[0;34m"
+    -v out_color_number="\033[0;32m"
+    -v out_color_null="\033[0;33m"
+    -v out_color_true="\033[7;32m"
+    -v out_color_false="\033[7;31m"
+    )
+    echo "${A[*]}"
 }
 

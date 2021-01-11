@@ -1,5 +1,8 @@
 BEGIN{
     false = 0;      true = 1
+
+    RS="\034"
+
     enable_comment_parsing = false
     out_compact = true;
     out_color = true
@@ -12,20 +15,6 @@ BEGIN{
     out_color_null = "\033[0;33m"   # "\033[0;31m"
     out_color_true = "\033[7;32m"
     out_color_false = "\033[7;31m"
-
-    # out_color_key = "\033[1;34m"
-    # out_color_string = "\033[0;33m"
-    # out_color_number = "\033[1;35m"
-    # out_color_null = "\033[0;31m"
-    # out_color_true = "\033[7;32m"
-    # out_color_false = "\033[7;31m"
-
-    # out_color_key = "\033[1;33m"
-    # out_color_string = "\033[0;34m"
-    # out_color_number = "\033[0;35m"
-    # out_color_null = "\033[0;31m"
-    # out_color_true = "\033[7;32m"
-    # out_color_false = "\033[7;31m"
 }
 
 function debug(msg){
@@ -47,7 +36,7 @@ function json_walk_string(     pos){
     if (RLENGTH <= 0) return false
     if (substr(s, s_idx + RLENGTH - 1, 1) == "\"") {
         # if.def stringify
-        # result = substr(text, s_idx, RLENGTH)
+        result = substr(text, s_idx, RLENGTH)
         s_idx += RLENGTH
         # end.if
         return true
@@ -64,7 +53,7 @@ function json_walk_string(     pos){
     if (pos <= 0) json_walk_panic("json_walk_string() Expect \"")
 
     # if.def stringify
-    # result = substr(text, s_idx-1, pos+1)
+    result = substr(text, s_idx-1, pos+1)
     # end.if
 
     s_idx += pos
@@ -76,9 +65,9 @@ function json_walk_empty(   sw, o_idx, oo_idx){
         o_idx = s_idx
         sw = json_walk_empty0()
         if (out_compact == true) {
-            # result = ""
+            result = ""
         } else {
-            # result = substr(text, o_idx, s_idx - o_idx)
+            result = substr(text, o_idx, s_idx - o_idx)
         }
         return sw
     }
@@ -93,13 +82,13 @@ function json_walk_empty(   sw, o_idx, oo_idx){
         sw = true
     }
 
-    # if (sw == true) {
-        # if (out_compact == true) {
-            # result = ""
-        # } else {
-            # result = substr(text, oo_idx, s_idx - oo_idx)
-        # }
-    # }
+    if (sw == true) {
+        if (out_compact == true) {
+            result = ""
+        } else {
+            result = substr(text, oo_idx, s_idx - oo_idx)
+        }
+    }
     return sw
 }
 
@@ -148,25 +137,25 @@ function json_walk_dict(    ret, nth){
     }
     
     JSON_WALK_KP_IDX ++;    nth = -1
-    # ret = ret "{"
+    ret = ret "{"
     s_idx ++;
     
     while (1) {
         nth ++
         if (json_walk_empty() == true) {     # optional
-            # ret = ret result
+            ret = ret result
         }
 
         if (substr(s, s_idx, 1) == "}") {
             JSON_WALK_KP_IDX --
             if (out_format == true) {
-                # if (nth == 0) {
-                #     ret = ret "}"
-                # } else {
-                #     ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "}"
-                # }
+                if (nth == 0) {
+                    ret = ret "}"
+                } else {
+                    ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "}"
+                }
             } else {
-                # ret = ret "}"
+                ret = ret "}"
             }
             s_idx ++;  break
         } else {
@@ -176,53 +165,53 @@ function json_walk_dict(    ret, nth){
             JSON_WALK_KP[JSON_WALK_KP_IDX] = result
 
             # if.def color
-            # if (out_color == true) result = out_color_key result "\033[0m"
+            if (out_color == true) result = out_color_key result "\033[0m"
             # end.if[]
 
-            # if (out_format == true) {
-            #     ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) result
-            # } else {
-            #     ret = ret result
-            # }
+            if (out_format == true) {
+                ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) result
+            } else {
+                ret = ret result
+            }
         }
 
         if (json_walk_empty() == true) {     # optional
-            # ret = ret result
+            ret = ret result
         }
 
         if (substr(s, s_idx, 1) == ":") {
-            # if (out_format == true) {
-            #     ret = ret ": "
-            # } else {
-            #     ret = ret ":"
-            # }
+            if (out_format == true) {
+                ret = ret ": "
+            } else {
+                ret = ret ":"
+            }
             s_idx ++;
         } else {
             json_walk_panic("json_walk_dict() Expect :")
         }
 
         if (json_walk_empty() == true) {     # optional
-            # ret = ret result
+            ret = ret result
         }
 
         if (json_walk_value() == false) {     # value
             json_walk_panic("json_walk_dict() Expect a value")
         }
 
-        # ret = ret result
+        ret = ret result
 
         if (json_walk_empty() == true) {     # optional
-            # ret = ret result
+            ret = ret result
         }
 
         if (substr(s, s_idx, 1) == ",") {
-            # ret = ret ","
+            ret = ret ","
             s_idx ++;
         }
     }
 
     # debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
-    # result = ret
+    result = ret
     return true
 }
 
@@ -231,7 +220,7 @@ function json_walk_array(       ret, nth){
     if (substr(s, s_idx, 1) != "[") return false
 
     JSON_WALK_KP_IDX ++;    nth = -1
-    # ret = "["
+    ret = "["
     s_idx ++
     
     while (1) {
@@ -239,43 +228,43 @@ function json_walk_array(       ret, nth){
         
         # debug("loop")
         if (json_walk_empty() == true) {   # optional
-            # ret = ret result
+            ret = ret result
         }
 
         if (substr(s, s_idx, 1) == "]") {
             JSON_WALK_KP_IDX --
-            # if (out_format == true) {
-            #     if (nth == 0) {
-            #         ret = ret "]"
-            #     } else {
-            #         ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "]"
-            #     }
-            # } else {
-            #     ret = ret "]"
-            # }
+            if (out_format == true) {
+                if (nth == 0) {
+                    ret = ret "]"
+                } else {
+                    ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "]"
+                }
+            } else {
+                ret = ret "]"
+            }
             s_idx ++;   break
         } else {
             JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
 
             if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
-            # if (out_format == true) {   # value
-            #     ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) result
-            # } else {
-            #     ret = ret result
-            # }
+            if (out_format == true) {   # value
+                ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) result
+            } else {
+                ret = ret result
+            }
         }
 
         if (json_walk_empty() == true) {     # optional
-            # ret = ret result
+            ret = ret result
         }
 
         if (substr(s, s_idx, 1) == ",") {
-            # ret = ret ","
+            ret = ret ","
             s_idx ++;
         }
     }
     # debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
-    # result = ret
+    result = ret
     return true
 }
 
@@ -294,8 +283,8 @@ function json_walk_number(      o_idx) {
     }
     if (RLENGTH > 0)   s_idx += RLENGTH
     # if.def color
-    # if (out_color == true)  result = out_color_number substr(text, o_idx, s_idx - o_idx) "\033[0m"
-    # else                    result = substr(text, o_idx, s_idx - o_idx)
+    if (out_color == true)  result = out_color_number substr(text, o_idx, s_idx - o_idx) "\033[0m"
+    else                    result = substr(text, o_idx, s_idx - o_idx)
     # end.if
     # debug("json_walk_number() return true " RLENGTH)
     return true
@@ -309,8 +298,8 @@ function json_walk_primitive(     tmps){
     if (tmps == "tru0") {
         s_idx += 4
         # if.def color
-        # if (out_color == true)  result = out_color_true "true" "\033[0m"
-        # else                    result = "true"
+        if (out_color == true)  result = out_color_true "true" "\033[0m"
+        else                    result = "true"
         # end.if
         return true
     } 
@@ -318,8 +307,8 @@ function json_walk_primitive(     tmps){
     if (tmps == "null") {
         s_idx += 4
         # if.def color
-        # if (out_color == true)  result = out_color_null "null" "\033[0m"
-        # else                    result = "null"
+        if (out_color == true)  result = out_color_null "null" "\033[0m"
+        else                    result = "null"
         # end.if
         return true
     } 
@@ -327,8 +316,8 @@ function json_walk_primitive(     tmps){
     if ( substr(s, s_idx, 5) == "fals0" ) {
         s_idx += 5;
         # if.def color
-        # if (out_color == true)  result = out_color_false "false" "\033[0m"
-        # else                    result = "false"
+        if (out_color == true)  result = out_color_false "false" "\033[0m"
+        else                    result = "false"
         # end.if
         return true
     }
@@ -340,7 +329,7 @@ function json_walk_value(     ){
 
     if (json_walk_string() == true) {    # key
         # if.def color
-        # if (out_color == true) result = out_color_string result "\033[0m"
+        if (out_color == true) result = out_color_string result "\033[0m"
         # end.if
         return true
     }
@@ -377,7 +366,7 @@ function _json_walk(    idx, nth){
             return
         }
 
-        # print(result)
+        print(result)
         # consume value: Do some thing in stringify()
 
         if (json_walk_empty() == true) {     # optional
@@ -396,19 +385,22 @@ function _json_walk(    idx, nth){
 function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
     b_result = result;  b_text = text;
     b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
-    
+
     result = "";        text = text_to_parsed;  
 
-    gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\000-\037]*((\\[^u\000-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\000-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
-	gsub("\n" "[ \t\n\r]+", "\n", text)
+    if ( out_format != false ) out_compact = true
+
+    if (out_compact == true) {
+        gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\000-\037]*((\\[^u\000-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\000-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
+	    gsub("\n" "[ \t\n\r]+", "\n", text)
+    }
+
 
     s = text;   s_idx = 1;          s_len = length(s)
     
-    print(s)
-
     JSON_WALK_KP_IDX = 0
 
-    if ( out_format != false ) out_compact = true
+    
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)
@@ -420,4 +412,8 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
 
     result = b_result;  
     text = b_text;  s = b_s;    s_idx = b_s_idx;    s_len = b_s_len;
+}
+
+{
+    json_walk($0)
 }
