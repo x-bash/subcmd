@@ -1,15 +1,15 @@
 BEGIN{
     false = 0;      true = 1
-    enable_comment_parsing = false
+    enable_comment_parsing = true
     out_compact = false;
-    out_format = true;  # Using compilation switch to enable or disable code
+    out_format = false;  # Using compilation switch to enable or disable code
     out_indent_step = 2
     out_color = true
 
     out_color_key = "\033[0;35m"
     out_color_string = "\033[0;34m"
     out_color_number = "\033[0;32m"
-    out_color_null = "\033[0;31m"
+    out_color_null = "\033[0;33m"   # "\033[0;31m"
     out_color_true = "\033[7;32m"
     out_color_false = "\033[7;31m"
 
@@ -148,12 +148,12 @@ function json_walk_dict(    ret, nth){
             JSON_WALK_KP_IDX --
             if (out_format == true) {
                 if (nth == 0) {
-                    ret = ret " }"
+                    ret = ret "}"
                 } else {
                     ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "}"
                 }
             } else {
-                ret = ret "\n}"
+                ret = ret "}"
             }
             s_idx ++;  break
         } else {
@@ -233,7 +233,7 @@ function json_walk_array(       ret, nth){
             JSON_WALK_KP_IDX --
             if (out_format == true) {
                 if (nth == 0) {
-                    ret = ret " ]"
+                    ret = ret "]"
                 } else {
                     ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "]"
                 }
