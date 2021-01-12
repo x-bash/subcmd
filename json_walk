@@ -3,10 +3,12 @@ BEGIN{
 
     RS="\034"
 
-    enable_comment_parsing = true
+    enable_comment_parsing = false
+    enable_pseudo_string = false
+
     out_compact = false;
-    out_color = false
-    out_format = false;  # Using compilation switch to enable or disable code
+    out_color = true
+    out_format = true;  # Using compilation switch to enable or disable code
     out_indent_step = 2
 
     if (out_color_key == 0)     out_color_key = "\033[0;35m"
@@ -35,15 +37,44 @@ function json_walk_panic(msg,       start){
     exit 1
 }
 
+function json_walk_pseudo_string(     ss, pos){
+    # debug("json_walk_string start() ")
+
+    ss = substr(s, s_idx, 64)
+    match(ss, /(^"[^"]*"?)|(^[A-Za-z0-9_-\/$]+)/)
+    if (RLENGTH <= 0) return false
+
+    if (RLENGTH != 64) {
+        result = substr(text, s_idx, RLENGTH)
+        s_idx += RLENGTH
+        if (match(result, /^"/) == false) {
+            result = "\"" result "\""
+        }
+        return true
+    }
+
+    match(substr(s, s_idx), /(^"[^"]*")|(^[A-Za-z0-9_-\/$]+)/);    pos = RLENGTH  # index() is no way better then match()
+    if (pos <= 0) json_walk_panic("json_walk_string() Expect \"")
+
+    # if.def stringify
+    result = substr(text, s_idx, pos)
+    # end.if
+
+    s_idx += pos
+    return true
+}
+
 # If found not starts with ", go to another pattern.
 # Check true, false, null, number, then try string.
 
-function json_walk_string(     pos){
+function json_walk_strict_string(     pos){
+# function json_walk_string(     pos){
     # debug("json_walk_string start() ")
 
     match(substr(s, s_idx, 64), /^("[^"]*"?)/)
     if (RLENGTH <= 0) return false
-    if (substr(s, s_idx + RLENGTH - 1, 1) == "\"") {
+    # if (substr(s, s_idx + RLENGTH - 1, 1) == "\"") { # Performance defect design
+    if (RLENGTH != 64) {
         # if.def stringify
         result = substr(text, s_idx, RLENGTH)
         s_idx += RLENGTH
@@ -67,6 +98,13 @@ function json_walk_string(     pos){
 
     s_idx += pos
     return true
+}
+
+function json_walk_string(){
+    if (enable_pseudo_string == true) {
+        return json_walk_pseudo_string()
+    }
+    return json_walk_strict_string()
 }
 
 function json_walk_empty(   sw, o_idx, oo_idx){
