@@ -4,12 +4,13 @@ BEGIN{
     RS="\034"
 
     enable_comment_parsing = false
-    enable_pseudo_string = false
+    enable_pseudo_string = true
 
     out_compact = false;
     out_color = true
     out_format = true;  # Using compilation switch to enable or disable code
     out_indent_step = 2
+    out_indent_space = "  "
 
     if (out_color_key == 0)     out_color_key = "\033[0;35m"
     if (out_color_string == 0)  out_color_string = "\033[0;34m"
@@ -41,7 +42,8 @@ function json_walk_pseudo_string(     ss, pos){
     # debug("json_walk_string start() ")
 
     ss = substr(s, s_idx, 64)
-    match(ss, /(^"[^"]*"?)|(^[A-Za-z0-9_-\/$]+)/)
+    match(ss, /(^"[^"]*"?)|(^[^\n\ #\/\[{}\],:]+)/)
+    # match(ss, /(^"[^"]*"?)|(^[A-Za-z0-9_-\/$]+)/)
     if (RLENGTH <= 0) return false
 
     if (RLENGTH != 64) {
@@ -53,7 +55,9 @@ function json_walk_pseudo_string(     ss, pos){
         return true
     }
 
-    match(substr(s, s_idx), /(^"[^"]*")|(^[A-Za-z0-9_-\/$]+)/);    pos = RLENGTH  # index() is no way better then match()
+    # match(substr(s, s_idx), /(^"[^"]*")|(^[A-Za-z0-9_-\/$]+)/);   
+    match(substr(s, s_idx), /(^"[^"]*"?)|(^[^\n\ #\/\[{}\],:]+)/)
+    pos = RLENGTH  # index() is no way better then match()
     if (pos <= 0) json_walk_panic("json_walk_string() Expect \"")
 
     # if.def stringify
@@ -177,7 +181,7 @@ function json_walk_empty0(   o_idx){
     return true
 }
 
-function json_walk_dict(    ret, nth){
+function json_walk_dict(    ret, nth, cur_indent, bak_indent){
     if (substr(s, s_idx, 1) != "{") {
         # debug("json_walk_dict() fails" )
         return false
@@ -186,6 +190,10 @@ function json_walk_dict(    ret, nth){
     JSON_WALK_KP_IDX ++;    nth = -1
     ret = ret "{"
     s_idx ++;
+
+    bak_indent = JSON_INDENT
+    JSON_INDENT = JSON_INDENT out_indent_space
+    cur_indent = JSON_INDENT
     
     while (1) {
         nth ++
@@ -199,7 +207,7 @@ function json_walk_dict(    ret, nth){
                 if (nth == 0) {
                     ret = ret "}"
                 } else {
-                    ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "}"
+                    ret = ret "\n" bak_indent "}"
                 }
             } else {
                 ret = ret "}"
@@ -216,7 +224,7 @@ function json_walk_dict(    ret, nth){
             # end.if[]
 
             if (out_format == true) {
-                ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) result
+                ret = ret "\n" cur_indent result
             } else {
                 ret = ret result
             }
@@ -259,16 +267,22 @@ function json_walk_dict(    ret, nth){
 
     # debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
     result = ret
+
+    JSON_INDENT = bak_indent
     return true
 }
 
-function json_walk_array(       ret, nth){
+function json_walk_array(       ret, nth, cur_indent, bak_indent){
     # debug("json_walk_array start() ")
     if (substr(s, s_idx, 1) != "[") return false
 
     JSON_WALK_KP_IDX ++;    nth = -1
     ret = "["
     s_idx ++
+
+    bak_indent = JSON_INDENT
+    JSON_INDENT = JSON_INDENT out_indent_space
+    cur_indent = JSON_INDENT
     
     while (1) {
         nth++;
@@ -284,7 +298,7 @@ function json_walk_array(       ret, nth){
                 if (nth == 0) {
                     ret = ret "]"
                 } else {
-                    ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) "]"
+                    ret = ret "\n" bak_indent "]"
                 }
             } else {
                 ret = ret "]"
@@ -295,7 +309,7 @@ function json_walk_array(       ret, nth){
 
             if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
             if (out_format == true) {   # value
-                ret = ret "\n" (sprintf("%" ( - (JSON_WALK_KP_IDX - 1) * out_indent_step)  "s", "")) result
+                ret = ret "\n" cur_indent result
             } else {
                 ret = ret result
             }
@@ -312,6 +326,8 @@ function json_walk_array(       ret, nth){
     }
     # debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
     result = ret
+
+    JSON_INDENT = bak_indent
     return true
 }
 
@@ -374,6 +390,9 @@ function json_walk_primitive(     tmps){
 # string | primitive | dict | array
 function json_walk_value(     ){
 
+    # Must before the json_walk_string in case of pseudostring enable
+    if (json_walk_primitive() == true) return true
+
     if (json_walk_string() == true) {    # key
         # if.def color
         if (out_color == true) result = out_color_string result "\033[0m"
@@ -381,7 +400,6 @@ function json_walk_value(     ){
         return true
     }
 
-    if (json_walk_primitive() == true) return true
     if (json_walk_dict() == true) return true
     if (json_walk_array() == true) return true
     
@@ -445,6 +463,7 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
     s = text;   s_idx = 1;          s_len = length(s)
     
     JSON_WALK_KP_IDX = 0
+    JSON_INDENT = "";   out_indent_space=sprintf("%" out_indent_step "s", "")
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)

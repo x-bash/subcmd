@@ -182,6 +182,7 @@ function json_walk_value(){
 }
 
 function _json_walk(    idx, nth){
+    if (s == "")  s = JSON_TOKENS[++s_idx]
 
     # print(s_idx " " s_len)
     while (s_idx <= s_len) {
@@ -203,19 +204,18 @@ function json_walk(text,   b_s, b_result, b_s_idx, b_s_len){
     gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\001-\037]*((\\[^u\001-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\001-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
     # gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\000-\037]*((\\[^u\000-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\000-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
 	gsub("\n" "[ \t\n\r]+", "\n", text)
-    
+
+
     s_len = split(text, JSON_TOKENS, /\n/)
-
-    JSON_INDENT = ""
-
     s = JSON_TOKENS[s_idx];     s_idx = 1;
-    if (s == "")  s = JSON_TOKENS[++s_idx]
+
     JSON_WALK_KP_IDX = 0
+    JSON_INDENT = "";   out_indent_space=sprintf("%" out_indent_step "s", "")
 
     _json_walk()
 
-    # result = b_result;  
-    # s = b_s;    s_idx = b_s_idx;    s_len = b_s_len;
+    result = b_result;  
+    s = b_s;    s_idx = b_s_idx;    s_len = b_s_len;
 }
 
 {
