@@ -6,12 +6,12 @@ BEGIN{
     out_indent_step = 2
     out_indent_space = "  "
 
-    out_color_key = "\033[0;35m"
-    out_color_string = "\033[0;34m"
-    out_color_number = "\033[0;32m"
-    out_color_null = "\033[0;33m"   # "\033[0;31m"
-    out_color_true = "\033[7;32m"
-    out_color_false = "\033[7;31m"
+    if (out_color_key == 0)     out_color_key = "\033[0;35m"
+    if (out_color_string == 0)  out_color_string = "\033[0;34m"
+    if (out_color_number == 0)  out_color_number = "\033[0;32m"
+    if (out_color_null == 0)    out_color_null = "\033[0;33m"   # "\033[0;31m"
+    if (out_color_true == 0)    out_color_true = "\033[7;32m"
+    if (out_color_false == 0)   out_color_false = "\033[7;31m"
 
     RS="\034"
 }
