@@ -407,7 +407,7 @@ function json_walk_cb(s, idx0, idx1){
     print("---", idx1 substr(s, idx0, idx1 - idx0))
 }
 
-function _json_walk(    idx, nth){
+function _json_walk(    final, idx, nth){
 
     nth = -1
     while (s_idx <= s_len) {
@@ -427,7 +427,7 @@ function _json_walk(    idx, nth){
             return
         }
 
-        print(result)
+        final = final "\n" result
         # consume value: Do some thing in stringify()
 
         if (json_walk_empty() == true) {     # optional
@@ -440,10 +440,12 @@ function _json_walk(    idx, nth){
         
             # json_walk_cb(s, idx, s_idx)
     }
+
+    return final
 }
 
 # global variable: text, s, s_idx, s_len
-function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
+function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, final){
     b_result = result;  b_text = text;
     b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
 
@@ -467,12 +469,14 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
     
     gsub(/[\t\b\r\v]/, " ", s)
 
-    _json_walk()
+    final = _json_walk()
 
-    result = b_result;  
+    result = b_result;
     text = b_text;  s = b_s;    s_idx = b_s_idx;    s_len = b_s_len;
+
+    return final
 }
 
 {
-    json_walk($0)
+    print json_walk($0)
 }
