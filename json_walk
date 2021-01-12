@@ -3,18 +3,24 @@ BEGIN{
 
     RS="\034"
 
-    enable_comment_parsing = false
-    out_compact = true;
-    out_color = true
-    out_format = true;  # Using compilation switch to enable or disable code
+    enable_comment_parsing = true
+    out_compact = false;
+    out_color = false
+    out_format = false;  # Using compilation switch to enable or disable code
     out_indent_step = 2
 
-    out_color_key = "\033[0;35m"
-    out_color_string = "\033[0;34m"
-    out_color_number = "\033[0;32m"
-    out_color_null = "\033[0;33m"   # "\033[0;31m"
-    out_color_true = "\033[7;32m"
-    out_color_false = "\033[7;31m"
+    if (out_color_key == 0)     out_color_key = "\033[0;35m"
+    if (out_color_string == 0)  out_color_string = "\033[0;34m"
+    if (out_color_number == 0)  out_color_number = "\033[0;32m"
+    if (out_color_null == 0)    out_color_null = "\033[0;33m"   # "\033[0;31m"
+    if (out_color_true == 0)    out_color_true = "\033[7;32m"
+    if (out_color_false == 0)   out_color_false = "\033[7;31m"
+
+    # TODO
+    # Using \n to seperate .[].1.abc, check all of the space
+    # Extract the data? Then? Output the result? OK. Using a variable to controle string operation.
+    query_string = ""
+    replace_string = "query => value"
 }
 
 function debug(msg){
@@ -28,6 +34,9 @@ function json_walk_panic(msg,       start){
     print (msg " [index=" s_idx "]:\n-------------------\n" substr(text, start, s_idx - start)  "|"  substr(text, s_idx, 1) "|" substr(text, s_idx+1, 30) "\n-------------------") > "/dev/stderr"
     exit 1
 }
+
+# If found not starts with ", go to another pattern.
+# Check true, false, null, number, then try string.
 
 function json_walk_string(     pos){
     # debug("json_walk_string start() ")
@@ -390,17 +399,14 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text){
 
     if ( out_format != false ) out_compact = true
 
-    if (out_compact == true) {
-        gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\000-\037]*((\\[^u\000-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\000-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
-	    gsub("\n" "[ \t\n\r]+", "\n", text)
-    }
-
+    # if (out_compact == true) {
+    #     gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\000-\037]*((\\[^u\000-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\000-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
+	#     gsub("\n" "[ \t\n\r]+", "\n", text)
+    # }
 
     s = text;   s_idx = 1;          s_len = length(s)
     
     JSON_WALK_KP_IDX = 0
-
-    
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)
