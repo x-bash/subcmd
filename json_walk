@@ -331,10 +331,6 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent){
     return true
 }
 
-function json_walk_cb_value(token){
-    return token
-}
-
 function json_walk_number(      o_idx) {
     # if (substr(s, s_idx, 1) != "0") return false
     match(substr(s, s_idx, 8), /^0+/)
