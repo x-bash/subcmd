@@ -6,6 +6,16 @@ BEGIN{
     enable_comment_parsing = false
     enable_pseudo_string = true
 
+    # if.def op
+    # op="extract";     op_pattern=""
+    # op="replace";     op_pattern="";  op_value=""
+    # op="length";      op_pattern=""
+    # op="prepend";     op_pattern="";  op_value=""
+    # op="push";        op_pattern="";  op_value=""
+    # op="pop";         op_pattern=""
+    # op=false;   op_pattern=""
+    # end.def omp
+
     out_compact = false;
     out_color = true
     out_format = true;  # Using compilation switch to enable or disable code
@@ -19,11 +29,53 @@ BEGIN{
     if (out_color_true == 0)    out_color_true = "\033[7;32m"
     if (out_color_false == 0)   out_color_false = "\033[7;31m"
 
-    # TODO
-    # Using \n to seperate .[].1.abc, check all of the space
-    # Extract the data? Then? Output the result? OK. Using a variable to controle string operation.
+    inner_content_generate = true  # For extract
+
+    # TODO: Advance
+    # 1. Using \n to seperate .[].1.abc, check all of the space
+    # 2. Extract the data? Then? Output the result? OK. Using a variable to control string operation.
+    # 3. 
+
     query_string = ""
     replace_string = "query => value"
+}
+
+function query(s,   arr, tmp, e, idx, n, item){
+    s1 = s
+    e = "\034"
+
+    gsub(/\\\\/, "\001\001", s)
+    gsub(/\\"/, "\002\002", s)  # "
+    gsub(/\\\./, "\003\003", s)
+
+    # gsub(/\./, "\034", s)
+    # gsub(/\./, "|", s) # for debug
+
+    n = split(s, arr, ".")
+    if (arr[1] == "") tmp = 0
+    for (idx=2; idx<=n; idx ++) {
+        item = arr[idx]
+        if ( (match( item, /(^\[)|(^\")|(^\*$)|(^\*\*$)/ ) == false) ) {   #"
+            tmp = tmp "\034" "\"" item "\""
+        } else {
+            tmp = tmp "\034" item
+        }
+    }
+    s = tmp
+
+    gsub("\003\003", ".", s)
+    gsub("\002\002", "\\\"", s)  # "
+    gsub("\001\001", "\\\\", s)
+
+    # gsub(/\*/, "[^|]+", s)   # for debug
+    # gsub(/\*\*/, "([^|]+|)*[^|]+", s)    # for debug
+
+    gsub(/\*/, "[^\034]+", s)
+    gsub(/\*\*/, "([^\034]+\034)*[^\034]+", s)
+
+    gsub(/"[^"]+"/, "([^\034]+\034)*[^\034]+", s)   #"
+
+    return s
 }
 
 function debug(msg){
@@ -56,12 +108,12 @@ function json_walk_pseudo_string(     ss, pos){
     }
 
     # match(substr(s, s_idx), /(^"[^"]*")|(^[A-Za-z0-9_-\/$]+)/);   
-    match(substr(s, s_idx), /(^"[^"]*"?)|(^[^\n\ #\/\[{}\],:]+)/)
+    match(substr(s, s_idx), /(^"[^"]*"?)|(^[^\n\ #\/\[{}\],:]+)/)   # "
     pos = RLENGTH  # index() is no way better then match()
     if (pos <= 0) json_walk_panic("json_walk_string() Expect \"")
 
     # if.def stringify
-    result = substr(text, s_idx, pos)
+    if (inner_content_generate) result = substr(text, s_idx, pos)
     # end.if
 
     s_idx += pos
@@ -80,7 +132,7 @@ function json_walk_strict_string(     pos){
     # if (substr(s, s_idx + RLENGTH - 1, 1) == "\"") { # Performance defect design
     if (RLENGTH != 64) {
         # if.def stringify
-        result = substr(text, s_idx, RLENGTH)
+        if (inner_content_generate)  result = substr(text, s_idx, RLENGTH)
         s_idx += RLENGTH
         # end.if
         return true
@@ -97,7 +149,7 @@ function json_walk_strict_string(     pos){
     if (pos <= 0) json_walk_panic("json_walk_string() Expect \"")
 
     # if.def stringify
-    result = substr(text, s_idx-1, pos+1)
+    if (inner_content_generate) result = substr(text, s_idx-1, pos+1)
     # end.if
 
     s_idx += pos
@@ -181,14 +233,14 @@ function json_walk_empty0(   o_idx){
     return true
 }
 
-function json_walk_dict(    ret, nth, cur_indent, bak_indent){
+function json_walk_dict(    ret, nth, cur_indent, bak_indent, inner_content_generate_bak ){
     if (substr(s, s_idx, 1) != "{") {
         # debug("json_walk_dict() fails" )
         return false
     }
     
     JSON_WALK_KP_IDX ++;    nth = -1
-    ret = ret "{"
+    if (inner_content_generate) ret = ret "{"
     s_idx ++;
 
     bak_indent = JSON_INDENT
@@ -203,30 +255,37 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent){
 
         if (substr(s, s_idx, 1) == "}") {
             JSON_WALK_KP_IDX --
-            if (out_format == true) {
-                if (nth == 0) {
-                    ret = ret "}"
+            if (inner_content_generate) {
+                if (out_format == true) {
+                    if (nth == 0) {
+                        ret = ret "}"
+                    } else {
+                        ret = ret "\n" bak_indent "}"
+                    }
                 } else {
-                    ret = ret "\n" bak_indent "}"
+                    ret = ret "}"
                 }
-            } else {
-                ret = ret "}"
             }
             s_idx ++;  break
         } else {
+            inner_content_generate_bak = inner_content_generate
+            inner_content_generate = true
             if (json_walk_string() == false) {    # key
                 json_walk_panic("json_walk_dict() Expect a key")
             }
             JSON_WALK_KP[JSON_WALK_KP_IDX] = result
+            inner_content_generate = inner_content_generate_bak
 
-            # if.def color
-            if (out_color == true) result = out_color_key result "\033[0m"
-            # end.if[]
+            if (inner_content_generate) {
+                # if.def color
+                if (out_color == true) result = out_color_key result "\033[0m"
+                # end.if[]
 
-            if (out_format == true) {
-                ret = ret "\n" cur_indent result
-            } else {
-                ret = ret result
+                if (out_format == true) {
+                    ret = ret "\n" cur_indent result
+                } else {
+                    ret = ret result
+                }
             }
         }
 
@@ -235,10 +294,12 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent){
         }
 
         if (substr(s, s_idx, 1) == ":") {
-            if (out_format == true) {
-                ret = ret ": "
-            } else {
-                ret = ret ":"
+            if (inner_content_generate) {
+                if (out_format == true) {
+                    ret = ret ": "
+                } else {
+                    ret = ret ":"
+                }
             }
             s_idx ++;
         } else {
@@ -277,7 +338,7 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent){
     if (substr(s, s_idx, 1) != "[") return false
 
     JSON_WALK_KP_IDX ++;    nth = -1
-    ret = "["
+    if (inner_content_generate) ret = "["
     s_idx ++
 
     bak_indent = JSON_INDENT
@@ -294,33 +355,39 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent){
 
         if (substr(s, s_idx, 1) == "]") {
             JSON_WALK_KP_IDX --
-            if (out_format == true) {
-                if (nth == 0) {
-                    ret = ret "]"
+            if (inner_content_generate) {
+                if (out_format == true) {
+                    if (nth == 0) {
+                        ret = ret "]"
+                    } else {
+                        ret = ret "\n" bak_indent "]"
+                    }
                 } else {
-                    ret = ret "\n" bak_indent "]"
+                    ret = ret "]"
                 }
-            } else {
-                ret = ret "]"
             }
             s_idx ++;   break
         } else {
             JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
 
             if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
-            if (out_format == true) {   # value
-                ret = ret "\n" cur_indent result
-            } else {
-                ret = ret result
+            
+            if (inner_content_generate) {
+                if (out_format == true) {   # value
+                    ret = ret "\n" cur_indent result
+                } else {
+                    ret = ret result
+                }
             }
         }
 
+
         if (json_walk_empty() == true) {     # optional
-            ret = ret result
+            if (inner_content_generate) ret = ret result
         }
 
         if (substr(s, s_idx, 1) == ",") {
-            ret = ret ","
+            if (inner_content_generate) ret = ret ","
             s_idx ++;
         }
     }
@@ -342,8 +409,10 @@ function json_walk_number(      o_idx) {
     }
     if (RLENGTH > 0)   s_idx += RLENGTH
     # if.def color
-    if (out_color == true)  result = out_color_number substr(text, o_idx, s_idx - o_idx) "\033[0m"
-    else                    result = substr(text, o_idx, s_idx - o_idx)
+    if (inner_content_generate) {
+        if (out_color == true)  result = out_color_number substr(text, o_idx, s_idx - o_idx) "\033[0m"
+        else                    result = substr(text, o_idx, s_idx - o_idx)
+    }
     # end.if
     # debug("json_walk_number() return true " RLENGTH)
     return true
@@ -356,28 +425,34 @@ function json_walk_primitive(     tmps){
     tmps = substr(s, s_idx, 4)
     if (tmps == "tru0") {
         s_idx += 4
-        # if.def color
-        if (out_color == true)  result = out_color_true "true" "\033[0m"
-        else                    result = "true"
-        # end.if
+        if (inner_content_generate) {
+            # if.def color
+            if (out_color == true)  result = out_color_true "true" "\033[0m"
+            else                    result = "true"
+            # end.if
+        }
         return true
     } 
     
     if (tmps == "null") {
         s_idx += 4
-        # if.def color
-        if (out_color == true)  result = out_color_null "null" "\033[0m"
-        else                    result = "null"
-        # end.if
+        if (inner_content_generate) {
+            # if.def color
+            if (out_color == true)  result = out_color_null "null" "\033[0m"
+            else                    result = "null"
+            # end.if
+        }
         return true
     } 
     
     if ( substr(s, s_idx, 5) == "fals0" ) {
         s_idx += 5;
-        # if.def color
-        if (out_color == true)  result = out_color_false "false" "\033[0m"
-        else                    result = "false"
-        # end.if
+        if (inner_content_generate) {
+            # if.def color
+            if (out_color == true)  result = out_color_false "false" "\033[0m"
+            else                    result = "false"
+            # end.if
+        }
         return true
     }
     return false
@@ -390,9 +465,11 @@ function json_walk_value(     ){
     if (json_walk_primitive() == true) return true
 
     if (json_walk_string() == true) {    # key
-        # if.def color
-        if (out_color == true) result = out_color_string result "\033[0m"
-        # end.if
+        if (inner_content_generate) {
+            # if.def color
+            if (out_color == true) result = out_color_string result "\033[0m"
+            # end.if
+        }
         return true
     }
 
@@ -462,6 +539,11 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
     
     JSON_WALK_KP_IDX = 0
     JSON_INDENT = "";   out_indent_space=sprintf("%" out_indent_step "s", "")
+
+    if (op_pattern) {
+        op_pattern = query(op_pattern)
+        debug("op_pattern")
+    }
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)
