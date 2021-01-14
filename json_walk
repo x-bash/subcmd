@@ -42,6 +42,9 @@ BEGIN{
 
 function query(s,       KEYPATH_SEP,    arr, tmp, idx, n, item){
     if (KEYPATH_SEP == 0) KEYPATH_SEP = "\034"
+
+    if (s == ".")  return "^0$"
+
     s1 = s
 
     gsub(/\\\\/, "\001\001", s)
@@ -335,6 +338,10 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
     # debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
     result = ret
 
+    if ( (op == "length") && (match(JSON_WALK_KEY_PATH_BAK, opv1))) {
+        print nth
+    }
+
     JSON_INDENT = bak_indent
     JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK
     return true
@@ -411,6 +418,10 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
     }
     # debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
     result = ret
+
+    if ( (op == "length") && (match(JSON_WALK_KEY_PATH_BAK, opv1))) {
+        print nth    
+    }
 
     JSON_INDENT = bak_indent
     JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK
@@ -599,8 +610,6 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
 
     result = "";        text = text_to_parsed;  
 
-    if ( out_format != false ) out_compact = true
-
     # if (out_compact == true) {
     #     gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\000-\037]*((\\[^u\000-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\000-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
 	#     gsub("\n" "[ \t\n\r]+", "\n", text)
@@ -611,21 +620,6 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
     JSON_WALK_KP_IDX = 0
     JSON_WALK_KEY_PATH = ""
     JSON_INDENT = "";   out_indent_space=sprintf("%" out_indent_step "s", "")
-
-    if (op == "flat-value") {
-        if (opv1 == false) KEYPATH_SEP = "\t"
-        else KEYPATH_SEP = opv1
-        inner_content_generate = false
-    }
-
-    if (op == "flat") {
-        out_compact = true
-        out_format = false
-        if (opv == false) KEYPATH_SEP = "\t"
-        else KEYPATH_SEP = opv
-        # out_color = false
-        inner_content_generate = true
-    }
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)    #"
@@ -647,7 +641,29 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
     else 
         out_color = false
 
-    if (out_format) out_compact = true
+    # if (out_format) out_compact = true
+    if ( out_format != false ) out_compact = true
+
+    if (op == "flat-leaf") {
+        if (opv1 == false) KEYPATH_SEP = "\t"
+        else KEYPATH_SEP = opv1
+        inner_content_generate = false
+
+        json_walk($0)
+        exit 0
+    }
+    
+
+    if (op == "flat") {
+        out_compact = true
+        out_format = false
+        if (opv1 == false) KEYPATH_SEP = "\t"
+        else KEYPATH_SEP = opv1
+        # out_color = false
+        inner_content_generate = true
+        json_walk($0)
+        exit 0
+    }
 
     if (op == "values") {
         op = "extract"
@@ -680,16 +696,53 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
         exit 0
     }
 
+    if (op == "length") {
+        opv1 = query(opv1, KEYPATH_SEP)
+        debug("op_pattern: " opv1)
+        inner_content_generate = false
+        json_walk($0)
+        exit 0
+    }
 
-    # if (op = "pop") {
-    #     opv1 = query(opv1 ".0", KEYPATH_SEP)
+    if (op == "put-k-v") {
+        opv1 = query(opv1, KEYPATH_SEP)
+        debug("op_pattern: " opv1)
+        opv2 = opv2
+        debug("op_key: " opv2)
+        opv3 = json_walk(opv3)
+        debug("op_value: " opv3)
+        inner_content_generate = true
+        json_walk($0)
+        exit 0
+    }
+
+    # if (op == "prepend") {
+    #     opv1 = query(opv1, KEYPATH_SEP)
+    #     debug("op_pattern: " opv1)
+    #     inner_content_generate = false
+    #     json_walk($0)
+    #     exit 0
+    # }
+
+    # if (op == "append") {
+    #     opv1 = query(opv1, KEYPATH_SEP)
+    #     debug("op_pattern: " opv1)
+    #     inner_content_generate = false
+    #     json_walk($0)
     #     exit 0
     # }
 
     # if (op = "shift") {
     #     opv1 = query(opv1 ".0", KEYPATH_SEP)
+    #     op = 
     #     exit 0
     # }
+
+    # if (op = "pop") {
+    #     opv1 = query(opv1 ".0", KEYPATH_SEP)
+    #     exit 0
+    # }
+    
 
     # if (op == "preppend") {
     #     opv1 = query(opv1, KEYPATH_SEP)
