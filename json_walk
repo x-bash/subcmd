@@ -80,6 +80,7 @@ function query(s,       KEYPATH_SEP,    arr, tmp, idx, n, item){
 }
 
 function debug(msg){
+    if (dbg == false) return
 	print "idx[" s_idx "]  DEBUG:" msg > "/dev/stderr"
 }
 
@@ -226,7 +227,7 @@ function json_walk_empty0(   o_idx){
     return true
 }
 
-function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_KEY_PATH_BAK ){
+function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_KEY_PATH_BAK, enable_delete ){
     if (substr(s, s_idx, 1) != "{") {
         # debug("json_walk_dict() fails" )
         return false
@@ -250,6 +251,7 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
 
         if (substr(s, s_idx, 1) == "}") {
             JSON_WALK_KP_IDX --
+
             if (inner_content_generate) {
                 if (out_format == true) {
                     if (nth == 0) {
@@ -262,29 +264,33 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
                 }
             }
             s_idx ++;  break
-        } else {
-
-            o_idx = s_idx
-            if (json_walk_string_idx() == false) {    # key
-                json_walk_panic("json_walk_dict() Expect a key")
-            }
-
-            result = substr(text, o_idx, s_idx - o_idx)
-            JSON_WALK_KP[JSON_WALK_KP_IDX] = result
-            JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK KEYPATH_SEP result
-
-            if (inner_content_generate) {
-                # if.def color
-                if (out_color == true) result = out_color_key result "\033[0m"
-                # end.if[]
-
-                if (out_format == true) {
-                    ret = ret "\n" cur_indent result
-                } else {
-                    ret = ret result
-                }
-            }
         }
+
+        o_idx = s_idx
+        if (json_walk_string_idx() == false) {    # key
+            json_walk_panic("json_walk_dict() Expect a key")
+        }
+
+        result = substr(text, o_idx, s_idx - o_idx)
+        JSON_WALK_KP[JSON_WALK_KP_IDX] = result
+        JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK KEYPATH_SEP result
+
+        if ( (op == "del") && (match(JSON_WALK_KEY_PATH, opv1)) ) {
+            enable_delete = true
+            inner_content_generate = false
+        }
+
+        if (inner_content_generate) {
+            # if.def color
+            if (out_color == true) result = out_color_key result "\033[0m"
+            # end.if[]
+
+            if (out_format == true) {
+                ret = ret "\n" cur_indent result
+            } else {
+                ret = ret result
+            }
+        }        
 
         if (json_walk_empty() == true) {     # optional
             if (inner_content_generate) ret = ret result
@@ -319,6 +325,11 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
             if (inner_content_generate) ret = ret ","
             s_idx ++;
         }
+
+        if (enable_delete == true)  {
+            inner_content_generate = true
+            enable_delete = false
+        }
     }
 
     # debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
@@ -329,7 +340,7 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
     return true
 }
 
-function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_PATH_BAK){
+function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_PATH_BAK, enable_delete){
     # debug("json_walk_array start() ")
     if (substr(s, s_idx, 1) != "[") return false
 
@@ -365,21 +376,25 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
                 }
             }
             s_idx ++;   break
-        } else {
-            JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
-            JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK KEYPATH_SEP nth
-
-            json_walk_value()  # if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
-
-            if (inner_content_generate) {
-                if (out_format == true) {   # value
-                    ret = ret "\n" cur_indent result
-                } else {
-                    ret = ret result
-                }
-            }
         }
 
+        JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
+        JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK KEYPATH_SEP nth
+        if ( (op == "del") && (match(JSON_WALK_KEY_PATH, opv1)) ) {
+            enable_delete = true
+            inner_content_generate = false
+        }
+
+        json_walk_value()  # if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
+
+        if (inner_content_generate) {
+            if (out_format == true) {   # value
+                ret = ret "\n" cur_indent result
+            } else {
+                ret = ret result
+            }
+        }
+        
         if (json_walk_empty() == true) {     # optional
             if (inner_content_generate) ret = ret result
         }
@@ -387,6 +402,11 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
         if (substr(s, s_idx, 1) == ",") {
             if (inner_content_generate) ret = ret ","
             s_idx ++;
+        }
+
+        if (enable_delete == true)  {
+            inner_content_generate = true
+            enable_delete = false
         }
     }
     # debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
@@ -457,6 +477,7 @@ function json_walk_primitive(     tmps){
     return false
 }
 
+# TODO: make it better ... It will slow down the performance ...
 function json_walk_value(   res){
     if ((op == "replace") && match(JSON_WALK_KEY_PATH, opv1)) {
         inner_content_generate = false
@@ -469,7 +490,9 @@ function json_walk_value(   res){
         inner_content_generate = true
         res = json_walk_value_()
 
-        if (opv2 == "kv") { print JSON_WALK_KEY_PATH "-->" result }
+        debug(op "\t" opv1 "\t" result "\t" out_compact)
+
+        if (opv2 == "kv") { print JSON_WALK_KEY_PATH "\t-->\t" result }
         else if (opv2 == "k") { print JSON_WALK_KEY_PATH }
         else  { print result }
         inner_content_generate = false
@@ -589,11 +612,6 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
     JSON_WALK_KEY_PATH = ""
     JSON_INDENT = "";   out_indent_space=sprintf("%" out_indent_step "s", "")
 
-    if (op == "extract") {
-        opv1 = query(opv1, KEYPATH_SEP)
-        debug("op_pattern: " opv1)
-    }
-
     if (op == "flat-value") {
         if (opv1 == false) KEYPATH_SEP = "\t"
         else KEYPATH_SEP = opv1
@@ -631,38 +649,59 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
 
     if (out_format) out_compact = true
 
+    if (op == "values") {
+        op = "extract"
+        opv1 = opv1 ".*"
+    }
+
     if (op == "extract") {
         out_compact = true
+        out_format = false
+        inner_content_generate = false
+        opv1 = query(opv1, KEYPATH_SEP)
+        debug("op_pattern: " opv1)
+        json_walk($0)
+        exit 0
     }
 
     if (op == "replace") {
         opv1 = query(opv1, KEYPATH_SEP)
         opv2 = json_walk(opv2)
         debug("op_pattern: " opv1)
+        print json_walk($0)
+        exit 0
     }
 
+    if (op == "del") {
+        opv1 = query(opv1, KEYPATH_SEP)
+        debug("op_pattern: " opv1)
+        inner_content_generate = true
+        print json_walk($0)
+        exit 0
+    }
+
+
     # if (op = "pop") {
-    #     opv1 = query(opv1, KEYPATH_SEP)
+    #     opv1 = query(opv1 ".0", KEYPATH_SEP)
+    #     exit 0
     # }
 
     # if (op = "shift") {
-    #     opv1 = query(opv1, KEYPATH_SEP)
+    #     opv1 = query(opv1 ".0", KEYPATH_SEP)
+    #     exit 0
     # }
 
-    if (op = "del") {
-        opv1 = query(opv1, KEYPATH_SEP)
-    }
+    # if (op == "preppend") {
+    #     opv1 = query(opv1, KEYPATH_SEP)
+    #     print json_walk($0)
+    #     exit 0
+    # }
 
-    if (op = "preppend") {
-        opv1 = query(opv1, KEYPATH_SEP)
-    }
+    # if (op == "append") {
+    #     opv1 = query(opv1, KEYPATH_SEP)
+    #     print json_walk($0)
+    #     exit 0
+    # }
 
-    if (op = "append") {
-        opv1 = query(opv1, KEYPATH_SEP)
-    }
-
-    if ((op == 0) || (op == "replace"))
-        print json_walk($0)
-    else
-        json_walk($0)
+    json_walk($0)
 }
