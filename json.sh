@@ -97,3 +97,67 @@ json.awk.color1(){
     echo "${A[*]}"
 }
 
+json.array(){
+    local s=
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            true|false|null)  s="$s,$1"   ;;
+            # =\"*)             s="$2,${1:1}"   ;;
+            *)  if [[ "$1" =~ [+-]?[0-9]+(.[0-9]+)*([eE][0-9]+(.[0-9]+))* ]];       
+                then s="$s,$1" ;
+                else s="$s,\"${1//\"/\\\"}\"" ;
+                fi
+                ;;
+        esac
+        shift
+    done
+    echo "[${s:1}]"
+}
+
+json.escape(){
+    local a="${1:?Provide string}"
+    a="$(echo "${a//$'\\'/\\}")"
+    a="$(echo "${a//$'\n'/\\n}")"
+    a="$(echo "${a//$'\t'/\\t}")"
+    a="$(echo "${a//$'\b'/\\b}")"
+    a="$(echo "${a//\"/\\\"}")"
+    echo "\"$a\""
+}
+
+# Reference: https://github.com/jpmens/jo/blob/master/jo.md
+json.dict(){
+    printf "{\n"
+
+    local key value
+    local first=0
+    for i in "$@"; do
+        if [ "$first" -eq 0 ]; then
+            first=1
+        else
+            printf ',\n'
+        fi
+
+        key=${i%%=*}
+        if [ "$key" != "$i" ]; then
+            value=${i#*=}
+
+            case "$value" in
+            true|false|null)
+                printf '  %s: %s' "$(json.escape "$key")" "$value" ;;
+            *)
+                if [[ "$value" =~ ^[+-]?[0-9]+(.[0-9]+)*$ ]]; then
+                    printf '  %s: %s' "$(json.escape "$key")" "$value"
+                else
+                    printf '  %s: %s' "$key" "$(json.escape "$value")"
+                fi
+            esac
+            continue
+        fi
+
+        key=${i%%\:*}
+        value=${i#*\:}
+        printf '  %s: %s' "$(json.escape "$key")" "$(json.escape "$value")"
+    done
+    printf "\n}"
+}
+
