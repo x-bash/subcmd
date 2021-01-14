@@ -3,6 +3,9 @@ BEGIN{
 
     RS="\034"
 
+    KEYPATH_SEP = "\034"
+    # KEYPATH_SEP = ","
+
     enable_comment_parsing = false
     enable_pseudo_string = true
 
@@ -18,7 +21,7 @@ BEGIN{
 
     out_compact = false;
     out_color = true
-    out_format = true;  # Using compilation switch to enable or disable code
+    out_format = false;  # Using compilation switch to enable or disable code
     out_indent_step = 2
     out_indent_space = "  "
 
@@ -34,15 +37,12 @@ BEGIN{
     # TODO: Advance
     # 1. Using \n to seperate .[].1.abc, check all of the space
     # 2. Extract the data? Then? Output the result? OK. Using a variable to control string operation.
-    # 3. 
 
-    query_string = ""
-    replace_string = "query => value"
 }
 
-function query(s,   arr, tmp, e, idx, n, item){
+function query(s,       KEYPATH_SEP,    arr, tmp, idx, n, item){
+    if (KEYPATH_SEP == 0) KEYPATH_SEP = "\034"
     s1 = s
-    e = "\034"
 
     gsub(/\\\\/, "\001\001", s)
     gsub(/\\"/, "\002\002", s)  # "
@@ -56,9 +56,9 @@ function query(s,   arr, tmp, e, idx, n, item){
     for (idx=2; idx<=n; idx ++) {
         item = arr[idx]
         if ( (match( item, /(^\[)|(^\")|(^\*$)|(^\*\*$)/ ) == false) ) {   #"
-            tmp = tmp "\034" "\"" item "\""
+            tmp = tmp KEYPATH_SEP "\"" item "\""
         } else {
-            tmp = tmp "\034" item
+            tmp = tmp KEYPATH_SEP item
         }
     }
     s = tmp
@@ -70,11 +70,11 @@ function query(s,   arr, tmp, e, idx, n, item){
     # gsub(/\*/, "[^|]+", s)   # for debug
     # gsub(/\*\*/, "([^|]+|)*[^|]+", s)    # for debug
 
-    gsub(/\*/, "[^\034]+", s)
-    gsub(/\*\*/, "([^\034]+\034)*[^\034]+", s)
+    # TODO: KEYPATH_SEP
+    gsub(/\*/, "[^" KEYPATH_SEP "]+", s) #gsub(/\*/, "[^\034]+", s)
+    gsub(/\*\*/, "([^" KEYPATH_SEP "]+" KEYPATH_SEP ")*[^" KEYPATH_SEP "]+", s) # gsub(/\*\*/, "([^\034]+\034)*[^\034]+", s)
 
-    gsub(/"[^"]+"/, "([^\034]+\034)*[^\034]+", s)   #"
-
+    # gsub(/"[^"]+"/, "([^\034]+\034)*[^\034]+", s)   #"
     return s
 }
 
@@ -233,13 +233,15 @@ function json_walk_empty0(   o_idx){
     return true
 }
 
-function json_walk_dict(    ret, nth, cur_indent, bak_indent, inner_content_generate_bak ){
+function json_walk_dict(    ret, nth, cur_indent, bak_indent, inner_content_generate_bak, JSON_WALK_KEY_PATH_BAK ){
     if (substr(s, s_idx, 1) != "{") {
         # debug("json_walk_dict() fails" )
         return false
     }
     
     JSON_WALK_KP_IDX ++;    nth = -1
+    JSON_WALK_KEY_PATH_BAK = JSON_WALK_KEY_PATH
+
     if (inner_content_generate) ret = ret "{"
     s_idx ++;
 
@@ -274,6 +276,8 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, inner_content_gene
                 json_walk_panic("json_walk_dict() Expect a key")
             }
             JSON_WALK_KP[JSON_WALK_KP_IDX] = result
+            JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK KEYPATH_SEP result
+
             inner_content_generate = inner_content_generate_bak
 
             if (inner_content_generate) {
@@ -290,7 +294,7 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, inner_content_gene
         }
 
         if (json_walk_empty() == true) {     # optional
-            ret = ret result
+            if (inner_content_generate) ret = ret result
         }
 
         if (substr(s, s_idx, 1) == ":") {
@@ -307,21 +311,26 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, inner_content_gene
         }
 
         if (json_walk_empty() == true) {     # optional
-            ret = ret result
+            if (inner_content_generate) ret = ret result
         }
 
-        if (json_walk_value() == false) {     # value
-            json_walk_panic("json_walk_dict() Expect a value")
+        if ((op == "extract") && match(JSON_WALK_KEY_PATH, opv)) {
+            inner_content_generate = true
+            if (json_walk_value() == false)  json_walk_panic("json_walk_dict() Expect a value")
+            print JSON_WALK_KEY_PATH "-->" result
+            inner_content_generate = false
+        } else {
+            if (json_walk_value() == false)  json_walk_panic("json_walk_dict() Expect a value")
         }
 
-        ret = ret result
+        if (inner_content_generate) ret = ret result
 
         if (json_walk_empty() == true) {     # optional
-            ret = ret result
+            if (inner_content_generate) ret = ret result
         }
 
         if (substr(s, s_idx, 1) == ",") {
-            ret = ret ","
+            if (inner_content_generate) ret = ret ","
             s_idx ++;
         }
     }
@@ -330,14 +339,17 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, inner_content_gene
     result = ret
 
     JSON_INDENT = bak_indent
+    JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK
     return true
 }
 
-function json_walk_array(       ret, nth, cur_indent, bak_indent){
+function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_PATH_BAK){
     # debug("json_walk_array start() ")
     if (substr(s, s_idx, 1) != "[") return false
 
     JSON_WALK_KP_IDX ++;    nth = -1
+    JSON_WALK_KEY_PATH_BAK = JSON_WALK_KEY_PATH
+
     if (inner_content_generate) ret = "["
     s_idx ++
 
@@ -350,7 +362,7 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent){
         
         # debug("loop")
         if (json_walk_empty() == true) {   # optional
-            ret = ret result
+            if (inner_content_generate) ret = ret result
         }
 
         if (substr(s, s_idx, 1) == "]") {
@@ -369,9 +381,17 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent){
             s_idx ++;   break
         } else {
             JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
+            JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK KEYPATH_SEP nth
 
-            if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
-            
+            if ((op == "extract") && match(JSON_WALK_KEY_PATH, opv)) {
+                inner_content_generate = true
+                if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
+                print JSON_WALK_KEY_PATH "-->" result
+                inner_content_generate = false
+            } else {
+                if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
+            }
+
             if (inner_content_generate) {
                 if (out_format == true) {   # value
                     ret = ret "\n" cur_indent result
@@ -395,6 +415,7 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent){
     result = ret
 
     JSON_INDENT = bak_indent
+    JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK
     return true
 }
 
@@ -459,12 +480,29 @@ function json_walk_primitive(     tmps){
 }
 
 # string | primitive | dict | array
-function json_walk_value(     ){
+function json_walk_value(     o_idx){
 
+    o_idx = s_idx
     # Must before the json_walk_string in case of pseudostring enable
-    if (json_walk_primitive() == true) return true
+    if (json_walk_primitive() == true) {
+        if ( (op == "flat-value") || (op == "flat") ) {
+            if (result == false) {
+                print JSON_WALK_KEY_PATH "\t--->\t"  substr(text, o_idx, s_idx - o_idx)
+            } else {
+                print JSON_WALK_KEY_PATH "\t--->\t"  result
+            }
+        }
+        return true
+    }
 
     if (json_walk_string() == true) {    # key
+        if ( (op == "flat-value") || (op == "flat") ) {
+            if (result == false) {
+                print JSON_WALK_KEY_PATH "\t--->\t" substr(text, o_idx, s_idx - o_idx)
+            } else {
+                print JSON_WALK_KEY_PATH "\t--->\t" result
+            }
+        }
         if (inner_content_generate) {
             # if.def color
             if (out_color == true) result = out_color_string result "\033[0m"
@@ -473,8 +511,27 @@ function json_walk_value(     ){
         return true
     }
 
-    if (json_walk_dict() == true) return true
-    if (json_walk_array() == true) return true
+    if (json_walk_dict() == true) {
+        if ( op == "flat" ) {
+            if (result == false) {
+                print JSON_WALK_KEY_PATH "\t--->\t" substr(text, o_idx, s_idx - o_idx)
+            } else {
+                print JSON_WALK_KEY_PATH "\t--->\t" result
+            }
+        }
+        return true
+    }
+
+    if (json_walk_array() == true) {
+        if ( op == "flat" ) {
+            if (result == false) {
+                print JSON_WALK_KEY_PATH "\t--->\t" substr(text, o_idx, s_idx - o_idx)
+            } else {
+                print JSON_WALK_KEY_PATH "\t--->\t" result
+            }
+        }
+        return true
+    }
     
     json_walk_panic("json_walk_value() Expect a value")
     return false
@@ -484,9 +541,10 @@ function json_walk_cb(s, idx0, idx1){
     print("---", idx1 substr(s, idx0, idx1 - idx0))
 }
 
-function _json_walk(    final, idx, nth){
+function _json_walk(    final, idx, nth, JSON_WALK_KEY_PATH_BAK){
 
     nth = -1
+    JSON_WALK_KEY_PATH_BAK = JSON_WALK_KEY_PATH
     while (s_idx <= s_len) {
 
         idx = s_idx
@@ -497,7 +555,9 @@ function _json_walk(    final, idx, nth){
 
         nth ++;     JSON_WALK_KP_IDX = 1
         JSON_WALK_KP[1] = nth
+        JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK nth
 
+        result = ""
         if (json_walk_value() == false) {
             # debug("json_walk_value() Out -> " s_idx " : " )
             # break
@@ -518,6 +578,7 @@ function _json_walk(    final, idx, nth){
             # json_walk_cb(s, idx, s_idx)
     }
 
+    JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK
     return final
 }
 
@@ -538,15 +599,31 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
     s = text;   s_idx = 1;          s_len = length(s)
     
     JSON_WALK_KP_IDX = 0
+    JSON_WALK_KEY_PATH = ""
     JSON_INDENT = "";   out_indent_space=sprintf("%" out_indent_step "s", "")
 
-    if (op_pattern) {
-        op_pattern = query(op_pattern)
+    if (op == "extract") {
+        opv = query(opv, KEYPATH_SEP)
         debug("op_pattern")
     }
 
+    if (op == "flat-value") {
+        if (opv == false) KEYPATH_SEP = "\t"
+        else KEYPATH_SEP = opv
+        inner_content_generate = false
+    }
+
+    if (op == "flat") {
+        out_compact = true
+        out_format = false
+        if (opv == false) KEYPATH_SEP = "\t"
+        else KEYPATH_SEP = opv
+        # out_color = false
+        inner_content_generate = true
+    }
+
     gsub(/\\\\/, "__", s)
-    gsub(/\\"/, "__", s)
+    gsub(/\\"/, "__", s)    #"
     gsub(/[0123456789eE\.\+\-]/, 0, s) # number value
     
     gsub(/[\t\b\r\v]/, " ", s)
@@ -560,5 +637,13 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
 }
 
 {
-    print json_walk($0)
+    if (color != false) 
+        out_color = true 
+    else 
+        out_color = false
+
+    if ((op == 0) || (op == "replace"))
+        print json_walk($0)
+    else
+        json_walk($0)
 }
