@@ -704,6 +704,7 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
         exit 0
     }
 
+    # If it is done, it will substitute the replace function.
     if (op == "put-k-v") {
         opv1 = query(opv1, KEYPATH_SEP)
         debug("op_pattern: " opv1)
