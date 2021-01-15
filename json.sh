@@ -142,7 +142,7 @@ json.dict(){
             value=${i#*=}
 
             case "$value" in
-            true|false|null)
+            true|false|null|\{*\}|\[*\])
                 printf '  %s: %s' "$(json.escape "$key")" "$value" ;;
             *)
                 if [[ "$value" =~ ^[+-]?[0-9]+(.[0-9]+)*([eE][0-9]+(.[0-9]+))*$ ]]; then
