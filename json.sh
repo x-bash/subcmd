@@ -103,7 +103,7 @@ json.array(){
         case "$1" in
             true|false|null)  s="$s,$1"   ;;
             # =\"*)             s="$2,${1:1}"   ;;
-            *)  if [[ "$1" =~ [+-]?[0-9]+(.[0-9]+)*([eE][0-9]+(.[0-9]+))* ]];       
+            *)  if [[ "$1" =~ ^[+-]?[0-9]+(.[0-9]+)*([eE][0-9]+(.[0-9]+))*$ ]];       
                 then s="$s,$1" ;
                 else s="$s,\"${1//\"/\\\"}\"" ;
                 fi
@@ -145,7 +145,7 @@ json.dict(){
             true|false|null)
                 printf '  %s: %s' "$(json.escape "$key")" "$value" ;;
             *)
-                if [[ "$value" =~ ^[+-]?[0-9]+(.[0-9]+)*$ ]]; then
+                if [[ "$value" =~ ^[+-]?[0-9]+(.[0-9]+)*([eE][0-9]+(.[0-9]+))*$ ]]; then
                     printf '  %s: %s' "$(json.escape "$key")" "$value"
                 else
                     printf '  %s: %s' "$key" "$(json.escape "$value")"
