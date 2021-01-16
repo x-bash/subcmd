@@ -410,7 +410,7 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
     return true
 }
 
-function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_PATH_BAK, enable_delete){
+function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_PATH_BAK, enable_delete, enable_prepend, value_result, tmp1, tmp2){
     # debug("json_walk_array start() ")
     if (substr(s, s_idx, 1) != "[") return false
 
@@ -423,16 +423,30 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
     bak_indent = JSON_INDENT
     JSON_INDENT = JSON_INDENT out_indent_space
     cur_indent = JSON_INDENT
+
+    if ( (op == "prepend") && (match(JSON_WALK_KEY_PATH, opv1)) ) {
+        enable_prepend = true # 1
+    }
     
     while (1) {
         nth++;
         
         # debug("loop")
         if (json_walk_empty() == true) {   # optional
-            if (inner_content_generate) ret = ret result
+            if (inner_content_generate) {
+                tmp1 = result
+                ret = ret result
+            }
         }
 
         if (substr(s, s_idx, 1) == "]") {
+
+            if ( enable_prepend == 1 ) {
+                ret = ret tmp1 opv2 tmp2
+            } else if ( (op == "append") && (match(JSON_WALK_KEY_PATH_BAK, opv1)) ) {
+                ret = ret "," tmp1 opv2 tmp2
+            }
+
             JSON_WALK_KP_IDX --
             if (inner_content_generate) {
                 if (out_format == true) {
@@ -456,18 +470,27 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
         }
 
         json_walk_value()  # if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
+        value_result = result
 
         if (inner_content_generate) {
             if (out_format == true) {   # value
-                ret = ret "\n" cur_indent result
-            } else {
-                ret = ret result
+                tmp1 = "\n" cur_indent
             }
         }
         
         if (json_walk_empty() == true) {     # optional
-            if (inner_content_generate) ret = ret result
+            if (inner_content_generate) {
+                tmp2 = result
+                ret = ret result
+            }
         }
+
+        if ( enable_prepend == 1 ) {
+            enable_prepend = 2
+            ret = ret tmp1 opv2 tmp2 ","
+        }
+        
+        if (inner_content_generate) ret = ret tmp1 value_result tmp2
 
         if (substr(s, s_idx, 1) == ",") {
             if (inner_content_generate) ret = ret ","
@@ -754,6 +777,12 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
         exit 0
     }
 
+    if (op = "shift") {
+        op = "del"
+        opv1 = opv1 ".[0]"
+        debug("op_pattern: " opv1)
+    }
+
     if (op == "del") {
         opv1 = query(opv1, KEYPATH_SEP)
         debug("op_pattern: " opv1)
@@ -786,33 +815,29 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
         exit 0
     }
 
-    # if (op == "prepend") {
-    #     opv1 = query(opv1, KEYPATH_SEP)
-    #     debug("op_pattern: " opv1)
-    #     inner_content_generate = false
-    #     json_walk($0)
-    #     exit 0
-    # }
+    if (op == "prepend") {
+        opv1 = query(opv1, KEYPATH_SEP)
+        debug("op_pattern: " opv1)
+        opv2 = json_walk(opv2)
+        inner_content_generate = true
+        print json_walk($0)
+        exit 0
+    }
 
-    # if (op == "append") {
-    #     opv1 = query(opv1, KEYPATH_SEP)
-    #     debug("op_pattern: " opv1)
-    #     inner_content_generate = false
-    #     json_walk($0)
-    #     exit 0
-    # }
-
-    # if (op = "shift") {
-    #     opv1 = query(opv1 ".0", KEYPATH_SEP)
-    #     op = 
-    #     exit 0
-    # }
+    if (op == "append") {
+        opv1 = query(opv1, KEYPATH_SEP)
+        debug("op_pattern: " opv1)
+        opv2 = json_walk(opv2)
+        debug("op_value: " opv2)
+        inner_content_generate = true
+        print json_walk($0)
+        exit 0
+    }
 
     # if (op = "pop") {
-    #     opv1 = query(opv1 ".0", KEYPATH_SEP)
+    #     opv1 = query(opv1 "", KEYPATH_SEP)
     #     exit 0
     # }
-    
 
     # if (op == "preppend") {
     #     opv1 = query(opv1, KEYPATH_SEP)
