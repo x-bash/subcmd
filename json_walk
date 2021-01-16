@@ -246,21 +246,20 @@ function json_walk_empty0(   o_idx){
 }
 
 # tmp1, tmp2, tmp3 are for putkv
-function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_KEY_PATH_BAK, enable_delete, enable_putkv, key_result, tmp, tmp0, tmp1, tmp2, tmp3, comma_sw ){
+function json_walk_dict(keypath, indent,        
+    ret, cur_indent, cur_keypath, comma_sw, nth, o_idx,
+    enable_delete, enable_putkv, key_result, val_result, tmp, tmp0, tmp1, tmp2, tmp3, tmp4 ){
+
     if (substr(s, s_idx, 1) != "{") {
         # debug("json_walk_dict() fails" )
         return false
     }
     
-    JSON_WALK_KP_IDX ++;    nth = -1
-    JSON_WALK_KEY_PATH_BAK = JSON_WALK_KEY_PATH
-
+    nth = 0
     if (inner_content_generate) ret = ret "{"
     s_idx ++;
 
-    bak_indent = JSON_INDENT
-    JSON_INDENT = JSON_INDENT out_indent_space
-    cur_indent = JSON_INDENT
+    cur_indent = indent out_indent_space
 
     # Notice: putkv code
     if ( op == "putkv" ) {
@@ -270,38 +269,24 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
     }
     # Notice: putkv code - END
 
-    # devide
     comma_sw = ""
-    
     while (1) {
         nth ++
-        if (json_walk_empty() == true) {     # optional
-            if (inner_content_generate) tmp0 = result
-        }
+        tmp0 = "";  if (json_walk_empty() == true) tmp0 = result     # optional
 
         if (substr(s, s_idx, 1) == "}") {
             # Notice: putkv code
-            # Add new value
             if ( enable_putkv == 1 ) {
-                if (nth != 0) comma_sw = ","
-                if (out_format) {
-                    ret = ret comma_sw "\n" cur_indent opv2bak tmp2 ": " opv3
-                } else {
-                    ret = ret comma_sw tmp0 tmp1 opv2bak tmp2 ":" tmp3 opv3
-                }
+                if (out_format) ret = ret comma_sw "\n" cur_indent opv2bak ": " opv3
+                else            ret = ret comma_sw tmp1 opv2bak tmp2 ":" tmp3 opv3
                 nth ++
             }
             # Notice: putkv code - END
 
-            JSON_WALK_KP_IDX --
-
             if (inner_content_generate) {
                 if (out_format == true) {
-                    if (nth == 0) {
-                        ret = ret tmp0 "}"
-                    } else {
-                        ret = ret "\n" bak_indent "}"
-                    }
+                    if (nth == 0) ret = ret tmp0 "}"
+                    else ret = ret "\n" indent "}"
                 } else {
                     ret = ret tmp0 "}"
                 }
@@ -309,8 +294,7 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
             s_idx ++;  break
         }
 
-        ret = ret comma_sw tmp0
-
+        tmp1 = tmp0
         o_idx = s_idx
         tmp = json_walk_string_idx()
         if (tmp == false) {    # key
@@ -321,10 +305,8 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
             key_result = "\"" substr(text, o_idx, s_idx - o_idx) "\""
         }
 
-        JSON_WALK_KP[JSON_WALK_KP_IDX] = key_result
-        JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK KEYPATH_SEP key_result
-
-        if ( (op == "del") && (match(JSON_WALK_KEY_PATH, opv1)) ) {
+        cur_keypath = keypath KEYPATH_SEP key_result
+        if ( (op == "del") && (match(cur_keypath, opv1)) ) {
             enable_delete = true
             inner_content_generate = false  # optimize
         }
@@ -333,42 +315,14 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
             # if.def color
             if (out_color == true) key_result = out_color_key key_result "\033[0m"
             # end.if[]
-
-            if (out_format == true) {
-                tmp1 = "\n" cur_indent
-                ret = ret tmp1 key_result
-            } else {
-                ret = ret key_result
-            }
         }  
 
-        if (json_walk_empty() == true) {     # optional
-            if (inner_content_generate) {
-                tmp2 = result
-                ret = ret result
-            }
-        }
+        tmp2 = "";  if (json_walk_empty() == true)  tmp2 = result     # optional
 
-        if (substr(s, s_idx, 1) == ":") {
-            if (inner_content_generate) {
-                if (out_format == true) {
-                    ret = ret ": "
-                    tmp3 = " "
-                } else {
-                    ret = ret ":"
-                }
-            }
-            s_idx ++;
-        } else {
-            json_walk_panic("json_walk_dict() Expect :")
-        }
+        if (substr(s, s_idx, 1) != ":") json_walk_panic("json_walk_dict() Expect :")
+        s_idx ++;
 
-        if (json_walk_empty() == true) {     # optional
-            if (inner_content_generate) {
-                ret = ret result
-                tmp3 = tmp3 result
-            }
-        }
+        tmp3 = "";   if (json_walk_empty() == true)  tmp3 = result    # optional
 
         # Notice: putkv code
         if (enable_putkv == 1) {
@@ -379,166 +333,103 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
         }
         # # Notice: putkv code - END
 
-        json_walk_value() # if (json_walk_value() == false)  json_walk_panic("json_walk_dict() Expect a value")
-
-        if (inner_content_generate) ret = ret result
+        json_walk_value(cur_keypath, cur_indent) # if (json_walk_value() == false)  json_walk_panic("json_walk_dict() Expect a value")
 
         # Notice: putkv code
         if (enable_putkv == 2) {
             enable_putkv = 3
             inner_content_generate = true
-            ret = ret opv3
+            val_result = opv3
+        } else {
+            val_result = result
         }
         # # Notice: putkv code - END
 
-        if (json_walk_empty() == true) {     # optional
-            if (inner_content_generate) ret = ret result
+        tmp4 = "";  if (json_walk_empty() == true) tmp4 = result     # optional
+
+        if (inner_content_generate == true) {
+            if (out_format == true) ret = ret comma_sw "\n" cur_indent  key_result      ": "        val_result
+            else                    ret = ret comma_sw tmp1             key_result tmp2 ":" tmp3    val_result tmp4
         }
 
-
-        if (substr(s, s_idx, 1) == ",") {
-            if (inner_content_generate) comma_sw = ","
-            s_idx ++;
-        }
+        if (substr(s, s_idx, 1) == ",") s_idx ++; # TODO: We have to check it for some error.
 
         if (enable_delete == true)  {
             inner_content_generate = true
             enable_delete = false
         }
+
+        comma_sw = ","
     }
 
-    # debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
-    result = ret
+    if (inner_content_generate)   result = ret
 
-    if ( (op == "length") && (match(JSON_WALK_KEY_PATH_BAK, opv1))) {
+    if ( (op == "length") && (match(keypath, opv1))) {
         print nth
     }
 
-    JSON_INDENT = bak_indent
-    JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK
     return true
 }
 
-function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_PATH_BAK, enable_delete, enable_prepend, value_result, tmp1, tmp2){
+function json_walk_array(keypath, indent,       cur_indent, data, nth, cur_item, last_item, tmp, sp0, sp1, sp2){
     # debug("json_walk_array start() ")
     if (substr(s, s_idx, 1) != "[") return false
-
-    JSON_WALK_KP_IDX ++;    nth = -1
-    JSON_WALK_KEY_PATH_BAK = JSON_WALK_KEY_PATH
-
-    if (inner_content_generate) ret = "["
     s_idx ++
 
-    bak_indent = JSON_INDENT
-    JSON_INDENT = JSON_INDENT out_indent_space
-    cur_indent = JSON_INDENT
+    nth = 0
+    cur_indent = indent out_indent_space
 
-    if ( (op == "prepend") && (match(JSON_WALK_KEY_PATH, opv1)) ) {
-        enable_prepend = true # 1
-    }
-
-    comma_sw = ""
-    
     while (1) {
-        nth++;
-        
-        # debug("loop")
-        if (json_walk_empty() == true) {   # optional
-            if (inner_content_generate) {
-                tmp1 = result
-            }
-        }
+        sp0 = "";   if (json_walk_empty() == true) sp0 = result   # optional
 
         if (substr(s, s_idx, 1) == "]") {
-
-            if ( enable_prepend == 1 ) {
-                opv2 = json_walk(opv2, JSON_INDENT)
-                if (out_format == true) {
-                    ret = ret "\n" cur_indent opv2
-                } else {
-                    ret = ret tmp1 opv2 tmp2
-                }
-                nth ++
-            } else if ( (op == "append") && (match(JSON_WALK_KEY_PATH_BAK, opv1)) ) {
-                opv2 = json_walk(opv2, JSON_INDENT)
-
-                if (out_format == true) {
-                    ret = ret comma_sw "\n" cur_indent opv2
-                } else {
-                    ret = ret comma_sw tmp1 opv2 tmp2
-                }
-                nth ++
-            }
-
-            JSON_WALK_KP_IDX --
             if (inner_content_generate) {
                 if (out_format == true) {
-                    if (nth == 0) {
-                        ret = ret tmp1 "]"
-                    } else {
-                        ret = ret "\n" bak_indent "]"
-                    }
+                    if (nth == 0) last_item = sp0 "]"
+                    else last_item = "\n" indent "]"
                 } else {
-                    ret = ret tmp1 "]"
+                    last_item = sp0 "]"
                 }
             }
             s_idx ++;   break
         }
 
-        ret = ret comma_sw      # There must be a value. Add comma
-
-        JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
-        JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK KEYPATH_SEP nth
-        if ( (op == "del") && (match(JSON_WALK_KEY_PATH, opv1)) ) {
-            enable_delete = true
-            inner_content_generate = false
-        }
-
-        json_walk_value()  # if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
-        value_result = result
-
+        nth ++
+        sp1 = sp0 
         if (inner_content_generate) {
-            if (out_format == true) {   # value
-                tmp1 = "\n" cur_indent
-            }
-        }
-        
-        if (json_walk_empty() == true) {     # optional
-            if (inner_content_generate) {
-                tmp2 = result
-            }
+            if (out_format == true) sp1 = "\n" cur_indent
         }
 
-        if ( enable_prepend == 1 ) {
-            enable_prepend = 2
-            opv2 = json_walk(opv2, JSON_INDENT)
-            ret = ret tmp1 opv2 tmp2 ","
-            nth ++
-            JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
-            JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK KEYPATH_SEP nth
-        }
-        
-        if (inner_content_generate) ret = ret tmp1 value_result tmp2
+        json_walk_value(keypath KEYPATH_SEP nth, cur_indent)  # if (json_walk_value() == false)  json_walk_panic("json_walk_array() Expect a value")
+        cur_item = result
 
-        if (substr(s, s_idx, 1) == ",") {
-            if (inner_content_generate) comma_sw = ","
-            s_idx ++;
+        sp2 = "";   if (json_walk_empty() == true) sp2 = result    # optional
+        if (substr(s, s_idx, 1) == ",") s_idx ++;
+
+        if ( (nth==0) && (op == "prepend") && (match(keypath, opv1)) ) {
+            if (out_format == true)     data[nth++] = "\n" cur_indent cur_item
+            else                        data[nth++] = sp1 json_walk(opv2) sp2
         }
 
-        if (enable_delete == true)  {
-            inner_content_generate = true
-            enable_delete = false
-        }
+        if (out_format == true)     data[nth] = "\n" cur_indent cur_item
+        else                        data[nth] = sp1 cur_item sp2
     }
-    # debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
-    result = ret
 
-    if ( (op == "length") && (match(JSON_WALK_KEY_PATH_BAK, opv1))) {
+    if ( (op == "length") && (match(keypath, opv1))) {
         print nth
+    } else if ((op == "del") && (match(keypath, opv1)) ) {
+        data[substr(opv2, 1, length(opv2) - 2)] = ""
+    } else if ((op == "append") && (match(keypath, opv1)) ) {
+        data[++nth] = sp1 json_walk(opv2, JSON_INDENT) sp2
     }
 
-    JSON_INDENT = bak_indent
-    JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK
+    if (inner_content_generate)   {
+        if (nth >= 1)   result = "["  data[1]
+        else            result = "["
+        for (tmp=2; tmp<=nth; tmp++)    result = result "," data[tmp]
+        result = result last_item
+    }
+
     return true
 }
 
@@ -603,41 +494,41 @@ function json_walk_primitive(     tmps){
 }
 
 # TODO: make it better ... It will slow down the performance ...
-function json_walk_value(   res){
-    if ((op == "replace") && match(JSON_WALK_KEY_PATH, opv1)) {
+function json_walk_value(keypath, indent,    res){
+    if ((op == "replace") && match(keypath, opv1)) {
         inner_content_generate = false
-        res = json_walk_value_()
+        res = json_walk_value_(keypath, indent)
 
         inner_content_generate = true
-        result = json_walk(opv2, JSON_INDENT)
-    } else if ((op == "extract") && match(JSON_WALK_KEY_PATH, opv1)) {
+        result = json_walk(opv2, indent)
+    } else if ((op == "extract") && match(keypath, opv1)) {
         inner_content_generate = true
-        res = json_walk_value_()
+        res = json_walk_value_(keypath, indent)
 
-        if (opv2 == "kv") { print JSON_WALK_KEY_PATH "\t-->\t" result }
-        else if (opv2 == "k") { print JSON_WALK_KEY_PATH }
+        if (opv2 == "kv") { print keypath "\t-->\t" result }
+        else if (opv2 == "k") { print keypath }
         else  { print result }
         inner_content_generate = false
 
     } else if (op == "flat") {
         inner_content_generate = true
-        res = json_walk_value_()
-        print JSON_WALK_KEY_PATH "\t--->\t"  result
+        res = json_walk_value_(keypath, indent)
+        print keypath "\t--->\t"  result
         
     } else if (op == "flat-leaf") { 
         inner_content_generate = true
-        res = json_walk_value_()
-        if (result) print JSON_WALK_KEY_PATH "\t--->\t"  result
+        res = json_walk_value_(keypath, indent)
+        if (result) print keypath "\t--->\t"  result
         inner_content_generate = false
     } else {
-        res = json_walk_value_()
+        res = json_walk_value_(keypath, indent)
     }
 
     return res
 }
 
 # string | primitive | dict | array
-function json_walk_value_(     o_idx, tmp){
+function json_walk_value_(keypath, indent,     o_idx, tmp){
 
     o_idx = s_idx
     # Must before the json_walk_string in case of pseudostring enable
@@ -662,9 +553,9 @@ function json_walk_value_(     o_idx, tmp){
         result = false
     }
 
-    if (json_walk_dict() == true) return true
-    if (json_walk_array() == true) return true
-    
+    if (json_walk_dict(keypath, indent) == true) return true
+    if (json_walk_array(keypath, indent) == true) return true
+
     json_walk_panic("json_walk_value() Expect a value")
     return false
 }
@@ -673,26 +564,21 @@ function json_walk_cb(s, idx0, idx1){
     print("---", idx1 substr(s, idx0, idx1 - idx0)) > "/dev/stderr"
 }
 
-function _json_walk(    final, idx, nth, JSON_WALK_KEY_PATH_BAK){
+function _json_walk(keypath, indent,   
+    final, idx, nth){
 
     final = ""
 
-    nth = -1
-    JSON_WALK_KEY_PATH_BAK = JSON_WALK_KEY_PATH
+    nth = 0
     while (s_idx <= s_len) {
-
         idx = s_idx
         
         if (json_walk_empty() == true) {     # optional
             # Do some thing in stringify()
         }
 
-        nth ++;     JSON_WALK_KP_IDX = 1
-        JSON_WALK_KP[1] = nth
-        JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK nth
-
         result = ""
-        if (json_walk_value() == false) {
+        if (json_walk_value(nth++, indent) == false) {
             # debug("json_walk_value() Out -> " s_idx " : " )
             # break
             return
@@ -713,18 +599,13 @@ function _json_walk(    final, idx, nth, JSON_WALK_KEY_PATH_BAK){
             # json_walk_cb(s, idx, s_idx)
     }
 
-    JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK
     return final
 }
 
 # global variable: text, s, s_idx, s_len
-function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b_s_idx, b_s_len, b_text, final, JSON_WALK_KP_IDX_BAK, JSON_WALK_KEY_PATH_BAK, JSON_INDENT_BAK){
+function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b_s_idx, b_s_len, b_text, final){
     b_result = result;  b_text = text;
     b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
-
-    JSON_WALK_KP_IDX_BAK = JSON_WALK_KP_IDX
-    JSON_WALK_KEY_PATH_BAK = JSON_WALK_KEY_PATH
-    JSON_INDENT_BAK = JSON_INDENT
 
     result = "";        text = text_to_parsed;  
 
@@ -735,11 +616,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
 
     s = text;   s_idx = 1;          s_len = length(s)
     
-    JSON_WALK_KP_IDX = 0
-    JSON_WALK_KEY_PATH = ""
-    
-    if (json_indent == 0) JSON_INDENT = ""
-    else JSON_INDENT = json_indent;
+    if (json_indent == 0) json_indent = ""
 
     out_indent_space=sprintf("%" out_indent_step "s", "")
 
@@ -749,7 +626,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     
     gsub(/[\t\b\r\v]/, " ", s)
 
-    final = _json_walk()
+    final = _json_walk("", json_indent)
 
     result = b_result;
     text = b_text;  s = b_s;    s_idx = b_s_idx;    s_len = b_s_len;
@@ -822,7 +699,9 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     }
 
     if (op == "del") {
-        opv1 = query(opv1, KEYPATH_SEP)
+        query_split(opv1, KEYPATH_SEP)
+        opv1 = QUERY_SPLIT_FA
+        opv2 = QUERY_SPLIT_KEY
         debug("op_pattern: " opv1)
         inner_content_generate = true
         print json_walk($0)
