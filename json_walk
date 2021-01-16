@@ -247,6 +247,7 @@ function json_walk_empty0(   o_idx){
     return true
 }
 
+# tmp1, tmp2, tmp3 are for putkv
 function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_KEY_PATH_BAK, enable_delete, enable_putkv, key_result, tmp, tmp1, tmp2, tmp3 ){
     if (substr(s, s_idx, 1) != "{") {
         # debug("json_walk_dict() fails" )
@@ -280,7 +281,8 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
         if (substr(s, s_idx, 1) == "}") {
             # Notice: putkv code
             if ( enable_putkv == 1 ) {
-                ret = ret "," opv2 ":" opv3
+                if (out_color) ret = ret "," tmp1 out_color_key opv2 "\033[0m" tmp2 ":" tmp3 opv3
+                else ret = ret "," tmp1 opv2 tmp2 ":" tmp3 opv3
             }
             # Notice: putkv code - END
 
@@ -320,24 +322,29 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
 
         if (inner_content_generate) {
             # if.def color
-            if (out_color == true) result = out_color_key result "\033[0m"
+            if (out_color == true) key_result = out_color_key key_result "\033[0m"
             # end.if[]
 
             if (out_format == true) {
-                ret = ret "\n" cur_indent result
+                tmp1 = "\n" cur_indent
+                ret = ret tmp1 key_result
             } else {
-                ret = ret result
+                ret = ret key_result
             }
         }  
 
         if (json_walk_empty() == true) {     # optional
-            if (inner_content_generate) ret = ret result
+            if (inner_content_generate) {
+                tmp2 = result
+                ret = ret result
+            }
         }
 
         if (substr(s, s_idx, 1) == ":") {
             if (inner_content_generate) {
                 if (out_format == true) {
                     ret = ret ": "
+                    tmp3 = " "
                 } else {
                     ret = ret ":"
                 }
@@ -348,7 +355,10 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
         }
 
         if (json_walk_empty() == true) {     # optional
-            if (inner_content_generate) ret = ret result
+            if (inner_content_generate) {
+                ret = ret result
+                tmp3 = tmp3 result
+            }
         }
 
         # Notice: putkv code
@@ -375,6 +385,7 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
         if (json_walk_empty() == true) {     # optional
             if (inner_content_generate) ret = ret result
         }
+
 
         if (substr(s, s_idx, 1) == ",") {
             if (inner_content_generate) ret = ret ","
@@ -578,7 +589,7 @@ function json_walk_value(   res){
 }
 
 # string | primitive | dict | array
-function json_walk_value_(     o_idx){
+function json_walk_value_(     o_idx, tmp){
 
     o_idx = s_idx
     # Must before the json_walk_string in case of pseudostring enable
@@ -586,10 +597,13 @@ function json_walk_value_(     o_idx){
         return true
     }
 
-    if (json_walk_string_idx() == true) {    # key
+    tmp = json_walk_string_idx()
+    if (tmp != false) {    # key
         if (inner_content_generate) {
             # if.def color
-            if (out_color == true) result = out_color_string substr(text, o_idx, s_idx - o_idx) "\033[0m"
+            if (tmp == true) result = substr(text, o_idx, s_idx - o_idx)
+            else result = "\"" substr(text, o_idx, s_idx - o_idx) "\""  # true 2
+            if (out_color == true) result = out_color_string result "\033[0m"
             # end.if
         }
         return true
@@ -689,7 +703,7 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
 
 {
     if (color != false) 
-        out_color = true 
+        out_color = true
     else 
         out_color = false
 
