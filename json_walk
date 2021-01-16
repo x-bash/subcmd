@@ -9,6 +9,20 @@ BEGIN{
     enable_comment_parsing = false
     enable_pseudo_string = true
 
+    OP_DEL          = 1
+    OP_LENGTH       = 2
+    OP_PUTVAL       = 3
+    OP_PUTKV        = 4
+    OP_PREPEND      = 5
+    OP_APPEND       = 6
+    OP_POP          = 7
+
+    OP_REPLACE      = 60
+    OP_EXTRACT      = 61
+    OP_FLAT         = 62
+    OP_FLAT_LEAF    = 63
+
+
     # if.def op
     # op="extract";     op_pattern=""
     # op="replace";     op_pattern="";  op_value=""
@@ -262,14 +276,14 @@ function json_walk_dict(keypath, indent,
     cur_indent = indent out_indent_space
 
     # Notice: putkv code
-    if ( op == "putkv" ) {
+    if ( op == OP_PUTKV ) {
         if (match(keypath, opv1)) {
             enable_putkv = 1
         }
     }
     # Notice: putkv code - END
 
-    if ( (op == "del") && (match(keypath, opv1)) ) {
+    if ( (op == OP_DEL) && (match(keypath, opv1)) ) {
         enable_delete = 1
     }
 
@@ -370,7 +384,7 @@ function json_walk_dict(keypath, indent,
 
     if (inner_content_generate)   result = ret
 
-    if ( (op == "length") && (match(keypath, opv1))) {
+    if ( (op == OP_LENGTH) && (match(keypath, opv1))) {
         print nth
     }
 
@@ -413,7 +427,7 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
         sp2 = "";   if (json_walk_empty() == true) sp2 = result    # optional
         if (substr(s, s_idx, 1) == ",") s_idx ++;
 
-        if ( (nth==0) && (op == "prepend") && (match(keypath, opv1)) ) {
+        if ( (nth==0) && (op == OP_PREPEND) && (match(keypath, opv1)) ) {
             if (out_format == true)     data[nth++] = "\n" cur_indent   json_walk(opv2)
             else                        data[nth++] = sp1               json_walk(opv2) sp2
         }
@@ -424,23 +438,23 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
 
     count = nth
 
-    if ( (op == "length") && (match(keypath, opv1))) {
+    if ( (op == OP_LENGTH) && (match(keypath, opv1))) {
         print nth
-    } else if ((op == "del") && (match(keypath, opv1)) && (match(opv2, /^\[[0-9]+\]$/))) {
+    } else if ((op == OP_DEL) && (match(keypath, opv1)) && (match(opv2, /^\[[0-9]+\]$/))) {
         tmp = int(substr(opv2, 2, length(opv2) - 2))
         count --
         for (; tmp < count; tmp ++ ){
             data[tmp] = data[tmp+1]
         }
         count --
-    } else if ((op == "append") && (match(keypath, opv1)) ) {
+    } else if ((op == OP_APPEND) && (match(keypath, opv1)) ) {
         data[nth] = sp1 json_walk(opv2, JSON_INDENT) sp2
         nth ++
         count ++
-    } else if ((op == "pop") && (match(keypath, opv1)) ) {
+    } else if ((op == OP_POP) && (match(keypath, opv1)) ) {
         data[--nth] = ""
         count --
-    } else if ((op == "putval") && (match(keypath, opv1)) ) {
+    } else if ((op == OP_PUTVAL) && (match(keypath, opv1)) ) {
         opv2 = int(opv2)
         if (out_format == true)     data[opv2] = "\n" cur_indent opv3
         else                        data[opv2] = sp1             opv3 sp2
@@ -531,13 +545,15 @@ function json_walk_primitive(     tmps){
 # TODO: make it better ... It will slow down the performance ...
 function json_walk_value(keypath, indent,    res){
 
-    if ((op == "replace") && match(keypath, opv1)) {
+    if ( op < OP_REPLACE ) {
+        res = json_walk_value_(keypath, indent)
+    } else if ((op == OP_REPLACE) && match(keypath, opv1)) {
         inner_content_generate = false
         res = json_walk_value_(keypath, indent)
 
         inner_content_generate = true
         result = json_walk(opv2, indent)
-    } else if ((op == "extract") && match(keypath, opv1)) {
+    } else if ((op == OP_EXTRACT) && match(keypath, opv1)) {
         inner_content_generate = true
         res = json_walk_value_(keypath, indent)
         if (opv2 == "kv") { print keypath "\t-->\t" result }
@@ -545,19 +561,21 @@ function json_walk_value(keypath, indent,    res){
         else  { print result }
         inner_content_generate = false
 
-    } else if (op == "flat") {
+    } else if (op == OP_FLAT) {
         inner_content_generate = true
         res = json_walk_value_(keypath, indent)
         print keypath "\t--->\t"  result
         
-    } else if (op == "flat-leaf") { 
+    } else if (op == OP_FLAT_LEAF) { 
         inner_content_generate = true
         res = json_walk_value_(keypath, indent)
         if (result) print keypath "\t--->\t"  result
         inner_content_generate = false
-    } else {
-        res = json_walk_value_(keypath, indent)
     }
+    
+    # else {
+    #     res = json_walk_value_(keypath, indent)
+    # }
 
     return res
 }
@@ -675,6 +693,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     if ( out_format != false ) out_compact = true
 
     if (op == "flat-leaf") {
+        op = OP_FLAT_LEAF
         if (opv1 == false)      KEYPATH_SEP = "\t"
         else                    KEYPATH_SEP = opv1
         inner_content_generate = false
@@ -685,6 +704,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
 
 
     if (op == "flat") {
+        op = OP_FLAT
         out_compact = true
         out_format = false
         if (opv1 == false)  KEYPATH_SEP = "\t"
@@ -701,6 +721,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     }
 
     if (op == "extract") {
+        op = OP_EXTRACT
         out_compact = true
         out_format = false
         inner_content_generate = false
@@ -711,6 +732,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     }
 
     if (op == "replace") {
+        op = OP_REPLACE
         opv1 = query(opv1, KEYPATH_SEP)
         # opv2 = json_walk(opv2)
         debug("op_pattern: " opv1)
@@ -726,6 +748,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     }
 
     if (op == "del") {
+        op = OP_DEL
         query_split(opv1, KEYPATH_SEP)
         opv1 = QUERY_SPLIT_FA
         opv2 = QUERY_SPLIT_KEY
@@ -736,6 +759,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     }
 
     if (op == "length") {
+        op = OP_LENGTH
         opv1 = query(opv1, KEYPATH_SEP)
         debug("op_pattern: " opv1)
         inner_content_generate = false
@@ -745,6 +769,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
 
     # If it is done, it will substitute the replace function.
     if (op == "put") {
+        op = OP_PUT
         opv3 = opv2
         query_split(opv1, KEYPATH_SEP)
         opv1 = QUERY_SPLIT_FA
@@ -770,6 +795,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     }
 
     if (op == "prepend") {
+        op = OP_PREPEND
         opv1 = query(opv1, KEYPATH_SEP)
         debug("prepend --- op_pattern: " opv1)
         inner_content_generate = true
@@ -778,6 +804,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     }
 
     if (op == "append") {
+        op = OP_APPEND
         opv1 = query(opv1, KEYPATH_SEP)
         inner_content_generate = true
         print json_walk($0)
@@ -785,6 +812,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     }
 
     if (op == "pop") {
+        op = OP_POP
         opv1 = query(opv1, KEYPATH_SEP)
         inner_content_generate = true
         print json_walk($0)
