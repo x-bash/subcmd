@@ -119,6 +119,8 @@ json.color(){
     awk -v format=1 -v color=1 -f "$JSON_AWK_PATH" <<<"${!varname}"
 }
 
+json.push(){ json.append "$@"; }
+
 json.append(){
     local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
 
@@ -156,7 +158,7 @@ json.prepend(){
 > json.putkv b.b 2
 > echo "$b"
 DOCTEST
-json.putkv(){
+json.put(){
     local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
 
     varname=${keypath%%.*}
@@ -165,9 +167,9 @@ json.putkv(){
     shift 2
     
     if [ "$varname" ]; then
-        s="$(awk -v dbg=1 -v op=putkv -v opv1="$opv1" -v opv2="$opv2" -f "$JSON_AWK_PATH" <<<"${!varname}")"
+        s="$(awk -v dbg=1 -v op=put -v opv1="$opv1" -v opv2="$opv2" -f "$JSON_AWK_PATH" <<<"${!varname}")"
     else
-        s="$(awk -v op=putkv -v opv1="$opv1" -v opv2="$opv2" -f "$JSON_AWK_PATH")"
+        s="$(awk -v op=put -v opv1="$opv1" -v opv2="$opv2" -f "$JSON_AWK_PATH")"
     fi
     eval "$varname=\"\$s\""
 }

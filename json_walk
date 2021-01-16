@@ -388,7 +388,7 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
     while (1) {
         sp0 = "";   if (json_walk_empty() == true) sp0 = result   # optional
 
-        ++nth
+        nth ++
 
         if (substr(s, s_idx, 1) == "]") {
             if (inner_content_generate) {
@@ -422,6 +422,7 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
         else                        data[nth] = sp1             cur_item sp2
     }
 
+    nth ++
     count = nth
 
     if ( (op == "length") && (match(keypath, opv1))) {
@@ -434,15 +435,16 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
         }
         count --
     } else if ((op == "append") && (match(keypath, opv1)) ) {
-        data[nth++] = sp1 json_walk(opv2, JSON_INDENT) sp2
+        data[nth] = sp1 json_walk(opv2, JSON_INDENT) sp2
+        nth ++
         count ++
     } else if ((op == "pop") && (match(keypath, opv1)) ) {
         data[--nth] = ""
         count --
     } else if ((op == "putval") && (match(keypath, opv1)) ) {
         opv2 = int(opv2)
-        if (out_format == true)     data[nth] = "\n" cur_indent opv3
-        else                        data[nth] = sp1             opv3 sp2
+        if (out_format == true)     data[opv2] = "\n" cur_indent opv3
+        else                        data[opv2] = sp1             opv3 sp2
         if (opv2 >= nth) {
             nth = opv2 + 1
             count = opv2 + 1
@@ -450,7 +452,7 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
     }
 
     if (inner_content_generate)   {
-        if (nth > 0)   result = "["  data[0]
+        if (nth > 0)    result = "["  data[0]
         else            result = "["
         for (tmp=1; tmp<nth; tmp++) {
             cur_item = data[tmp]
@@ -750,14 +752,13 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
         opv2 = QUERY_SPLIT_KEY
 
         if (match(opv2, /^\[[0-9]+\]/)) {
-            opv2=int(substr(opv2, 1, length(opv2)-2))
+            opv2=int(substr(opv2, 2, length(opv2)-2))
             op = "putval"
         } else {
             op = "putkv"
+            if (out_color) opv2bak = out_color_key opv2 "\033[0m"
+            else opv2bak = opv2
         }
-
-        if (out_color) opv2bak = out_color_key opv2 "\033[0m"
-        else opv2bak = opv2
 
         debug("op: " op)
         debug("op_pattern: " opv1)
