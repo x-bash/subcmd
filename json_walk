@@ -422,7 +422,6 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
         else                        data[nth] = sp1             cur_item sp2
     }
 
-    nth ++
     count = nth
 
     if ( (op == "length") && (match(keypath, opv1))) {
@@ -785,7 +784,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
         exit 0
     }
 
-    if (op = "pop") {
+    if (op == "pop") {
         opv1 = query(opv1, KEYPATH_SEP)
         inner_content_generate = true
         print json_walk($0)

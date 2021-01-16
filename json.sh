@@ -242,6 +242,26 @@ json.shift(){
 
 : <<"DOCTEST"
 > b=[1,2,3]
+> json.length b
+3
+DOCTEST
+json.length(){
+    local keypath=${1:?Provide variable name} opv1 varname s
+
+    varname=${keypath%%.*}
+    opv1=".${keypath#*.}"
+    [ "$varname" == "$keypath" ] && opv1="."
+    shift 2
+    
+    if [ "$varname" ]; then
+        awk -v op=length -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}"
+    else
+        awk -v op=length -v opv1="$opv1" -f "$JSON_AWK_PATH"
+    fi
+}
+
+: <<"DOCTEST"
+> b=[1,2,3]
 > json.pop b
 > echo $b
 [2,3]
