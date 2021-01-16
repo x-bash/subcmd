@@ -19,9 +19,14 @@ BEGIN{
     # op=false;   op_pattern=""
     # end.def omp
 
-    out_compact = false;
-    out_color = true
-    out_format = true;  # Using compilation switch to enable or disable code
+    if (compact != false)   out_compact = true;
+    else    out_compact = false
+
+    if (color != false)     out_color = true
+
+    if (format != false)    out_format = true;  # Using compilation switch to enable or disable code
+    else                    out_format = false
+
     out_indent_step = 2
     out_indent_space = "  "
 
@@ -241,7 +246,7 @@ function json_walk_empty0(   o_idx){
 }
 
 # tmp1, tmp2, tmp3 are for putkv
-function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_KEY_PATH_BAK, enable_delete, enable_putkv, key_result, tmp, tmp1, tmp2, tmp3, comma_sw ){
+function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_KEY_PATH_BAK, enable_delete, enable_putkv, key_result, tmp, tmp0, tmp1, tmp2, tmp3, comma_sw ){
     if (substr(s, s_idx, 1) != "{") {
         # debug("json_walk_dict() fails" )
         return false
@@ -271,7 +276,7 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
     while (1) {
         nth ++
         if (json_walk_empty() == true) {     # optional
-            if (inner_content_generate) comma_sw = comma_sw result
+            if (inner_content_generate) tmp0 = result
         }
 
         if (substr(s, s_idx, 1) == "}") {
@@ -281,7 +286,7 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
                 if (out_format) {
                     ret = ret comma_sw "\n" cur_indent opv2bak tmp2 ": " opv3
                 } else {
-                    ret = ret comma_sw tmp1 opv2bak tmp2 ":" tmp3 opv3
+                    ret = ret comma_sw tmp0 tmp1 opv2bak tmp2 ":" tmp3 opv3
                 }
                 nth ++
             }
@@ -292,18 +297,18 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
             if (inner_content_generate) {
                 if (out_format == true) {
                     if (nth == 0) {
-                        ret = ret "}"
+                        ret = ret tmp0 "}"
                     } else {
                         ret = ret "\n" bak_indent "}"
                     }
                 } else {
-                    ret = ret "}"
+                    ret = ret tmp0 "}"
                 }
             }
             s_idx ++;  break
         }
 
-        ret = ret comma_sw
+        ret = ret comma_sw tmp0
 
         o_idx = s_idx
         tmp = json_walk_string_idx()
@@ -440,7 +445,6 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
         if (json_walk_empty() == true) {   # optional
             if (inner_content_generate) {
                 tmp1 = result
-                ret = ret result
             }
         }
 
@@ -469,12 +473,12 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
             if (inner_content_generate) {
                 if (out_format == true) {
                     if (nth == 0) {
-                        ret = ret "]"
+                        ret = ret tmp1 "]"
                     } else {
                         ret = ret "\n" bak_indent "]"
                     }
                 } else {
-                    ret = ret "]"
+                    ret = ret tmp1 "]"
                 }
             }
             s_idx ++;   break
@@ -501,7 +505,6 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
         if (json_walk_empty() == true) {     # optional
             if (inner_content_generate) {
                 tmp2 = result
-                ret = ret result
             }
         }
 
@@ -530,7 +533,7 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
     result = ret
 
     if ( (op == "length") && (match(JSON_WALK_KEY_PATH_BAK, opv1))) {
-        print nth    
+        print nth
     }
 
     JSON_INDENT = bak_indent
@@ -609,8 +612,6 @@ function json_walk_value(   res){
     } else if ((op == "extract") && match(JSON_WALK_KEY_PATH, opv1)) {
         inner_content_generate = true
         res = json_walk_value_()
-
-        debug(op "\t" opv1 "\t" result "\t" out_compact)
 
         if (opv2 == "kv") { print JSON_WALK_KEY_PATH "\t-->\t" result }
         else if (opv2 == "k") { print JSON_WALK_KEY_PATH }
@@ -889,6 +890,5 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
     # }
 
     inner_content_generate = true
-    out_color = true
     print json_walk($0)
 }
