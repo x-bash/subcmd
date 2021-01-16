@@ -33,11 +33,6 @@ BEGIN{
     if (out_color_false == 0)   out_color_false = "\033[7;31m"
 
     inner_content_generate = true  # For extract
-
-    # TODO: Advance
-    # 1. Using \n to seperate .[].1.abc, check all of the space
-    # 2. Extract the data? Then? Output the result? OK. Using a variable to control string operation.
-
 }
 
 function _query_(s,       KEYPATH_SEP,    arr, tmp, idx, n, item){
@@ -74,7 +69,6 @@ function _query_(s,       KEYPATH_SEP,    arr, tmp, idx, n, item){
     # gsub(/\*/, "[^|]+", s)   # for debug
     # gsub(/\*\*/, "([^|]+|)*[^|]+", s)    # for debug
 
-    # TODO: KEYPATH_SEP
     gsub(/\*/, "[^" KEYPATH_SEP "]+", s) #gsub(/\*/, "[^\034]+", s)
     gsub(/\*\*/, "([^" KEYPATH_SEP "]+" KEYPATH_SEP ")*[^" KEYPATH_SEP "]+", s) # gsub(/\*\*/, "([^\034]+\034)*[^\034]+", s)
 
@@ -122,7 +116,6 @@ function json_walk_pseudo_string_idx(     ss, pos){
     if (RLENGTH != 64) {
         result = substr(text, s_idx, RLENGTH)
         s_idx += RLENGTH
-        # TODO: Move this code outside.
         if (match(result, /^"/) == false) return true2      #"
         # result = "\"" result "\""
         return true
@@ -454,6 +447,7 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
         if (substr(s, s_idx, 1) == "]") {
 
             if ( enable_prepend == 1 ) {
+                opv2 = json_walk(opv2, JSON_INDENT)
                 if (out_format == true) {
                     ret = ret "\n" cur_indent opv2
                 } else {
@@ -461,6 +455,8 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
                 }
                 nth ++
             } else if ( (op == "append") && (match(JSON_WALK_KEY_PATH_BAK, opv1)) ) {
+                opv2 = json_walk(opv2, JSON_INDENT)
+
                 if (out_format == true) {
                     ret = ret comma_sw "\n" cur_indent opv2
                 } else {
@@ -511,6 +507,7 @@ function json_walk_array(       ret, nth, cur_indent, bak_indent, JSON_WALK_KEY_
 
         if ( enable_prepend == 1 ) {
             enable_prepend = 2
+            opv2 = json_walk(opv2, JSON_INDENT)
             ret = ret tmp1 opv2 tmp2 ","
             nth ++
             JSON_WALK_KP[JSON_WALK_KP_IDX] = nth
@@ -607,9 +604,8 @@ function json_walk_value(   res){
         inner_content_generate = false
         res = json_walk_value_()
 
-        result = opv2
         inner_content_generate = true
-
+        result = json_walk(opv2, JSON_INDENT)
     } else if ((op == "extract") && match(JSON_WALK_KEY_PATH, opv1)) {
         inner_content_generate = true
         res = json_walk_value_()
@@ -720,9 +716,13 @@ function _json_walk(    final, idx, nth, JSON_WALK_KEY_PATH_BAK){
 }
 
 # global variable: text, s, s_idx, s_len
-function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, final){
+function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b_s_idx, b_s_len, b_text, final, JSON_WALK_KP_IDX_BAK, JSON_WALK_KEY_PATH_BAK, JSON_INDENT_BAK){
     b_result = result;  b_text = text;
     b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
+
+    JSON_WALK_KP_IDX_BAK = JSON_WALK_KP_IDX
+    JSON_WALK_KEY_PATH_BAK = JSON_WALK_KEY_PATH
+    JSON_INDENT_BAK = JSON_INDENT
 
     result = "";        text = text_to_parsed;  
 
@@ -735,7 +735,11 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
     
     JSON_WALK_KP_IDX = 0
     JSON_WALK_KEY_PATH = ""
-    JSON_INDENT = "";   out_indent_space=sprintf("%" out_indent_step "s", "")
+    
+    if (json_indent == 0) JSON_INDENT = ""
+    else JSON_INDENT = json_indent;
+
+    out_indent_space=sprintf("%" out_indent_step "s", "")
 
     gsub(/\\\\/, "__", s)
     gsub(/\\"/, "__", s)    #"
@@ -748,6 +752,10 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
     result = b_result;
     text = b_text;  s = b_s;    s_idx = b_s_idx;    s_len = b_s_len;
 
+    JSON_WALK_KP_IDX = JSON_WALK_KP_IDX_BAK
+    JSON_WALK_KEY_PATH = JSON_WALK_KEY_PATH_BAK
+    JSON_INDENT = JSON_INDENT_BAK
+    
     return final
 }
 
@@ -798,7 +806,7 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
 
     if (op == "replace") {
         opv1 = query(opv1, KEYPATH_SEP)
-        opv2 = json_walk(opv2)
+        # opv2 = json_walk(opv2)
         debug("op_pattern: " opv1)
         print json_walk($0)
         exit 0
@@ -848,7 +856,6 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
     if (op == "prepend") {
         opv1 = query(opv1, KEYPATH_SEP)
         debug("prepend --- op_pattern: " opv1)
-        opv2 = json_walk(opv2)
         inner_content_generate = true
         print json_walk($0)
         exit 0
@@ -857,7 +864,7 @@ function json_walk(text_to_parsed,   b_s, b_result, b_s_idx, b_s_len, b_text, fi
     if (op == "append") {
         opv1 = query(opv1, KEYPATH_SEP)
         debug("append --- op_pattern: " opv1)
-        opv2 = json_walk(opv2)
+        # opv2 = json_walk(opv2)
         debug("append --- op_value: " opv2)
         inner_content_generate = true
         print json_walk($0)
