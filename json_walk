@@ -43,7 +43,7 @@ BEGIN{
 function _query_(s,       KEYPATH_SEP,    arr, tmp, idx, n, item){
     if (KEYPATH_SEP == 0) KEYPATH_SEP = "\034"
 
-    if (s == ".")  return "^0$"
+    if (s == ".")  return "0"
 
     s1 = s
 
@@ -283,6 +283,7 @@ function json_walk_dict(    ret, nth, cur_indent, bak_indent, o_idx, JSON_WALK_K
             # Notice: putkv code
             # Add new value
             if ( enable_putkv == 1 ) {
+                if (nth != 0) comma_sw = ","
                 if (out_format) {
                     ret = ret comma_sw "\n" cur_indent opv2bak tmp2 ": " opv3
                 } else {
@@ -777,7 +778,7 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
         json_walk($0)
         exit 0
     }
-    
+
 
     if (op == "flat") {
         out_compact = true
@@ -815,7 +816,8 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
 
     if (op == "shift") {
         op = "del"
-        opv1 = opv1 ".[0]"
+        if (opv1 == ".") { opv1 = ".[0]" }
+        else opv1 = opv1 ".[0]"
         debug("op_pattern: " opv1)
     }
 
