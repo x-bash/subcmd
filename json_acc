@@ -145,11 +145,11 @@ function json_walk_value(keypath, indent){
 
     # if.def format
     if (out_color == true) {
-        if (match(s, "^\"")) result = out_color_string s "\033[0m"
-        else if (s == "true")   result = out_color_true s "\033[0m"
-        else if (s == "false")  result = out_color_false s "\033[0m"
-        else if (s == "null")  result = out_color_null s "\033[0m"
-        else result = out_color_number s "\033[0m"
+        if      (match(s, "^\""))   result  = out_color_string  s "\033[0m"
+        else if (s == "true")       result  = out_color_true    s "\033[0m"
+        else if (s == "false")      result  = out_color_false   s "\033[0m"
+        else if (s == "null")       result  = out_color_null    s "\033[0m"
+        else                        result  = out_color_number  s "\033[0m"
     } else {
         result = s
     }
