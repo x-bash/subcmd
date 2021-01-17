@@ -62,7 +62,10 @@ function _query_(s,       KEYPATH_SEP,    arr, tmp, idx, n, item){
     else tmp = arr[1]
     for (idx=2; idx<=n; idx ++) {
         item = arr[idx]
-        if ( (match( item, /(^\[)|(^")|(^\*$)|(^\*\*$)/ ) == false) ) {   #"
+        if ( match( item, /\/[^\/]+\// ) ) {
+            tmp = tmp KEYPATH_SEP "\"(" substr(item, 2, length(item)-2) ")\""
+            # tmp = tmp KEYPATH_SEP substr(item, 2, length(item)-2)
+        } else if ( (match( item, /(^\[)|(^")|(^\*$)|(^\*\*$)/ ) == false) ) {   #"
             tmp = tmp KEYPATH_SEP "\"" item "\""
         } else {
             tmp = tmp KEYPATH_SEP item
@@ -136,8 +139,9 @@ function json_walk_pseudo_string_idx(     ss, pos){
     pos = RLENGTH  # index() is no way better then match()
     if (pos <= 0) return false; # json_walk_panic("json_walk_string_idx() Expect \"")
 
+    # TODO. Optimize
+    if (match(ss, /^"/) == false) return true2      #"
     s_idx += pos
-    if (match(result, /^"/) == false) return true2      #"
     return true
 }
 
