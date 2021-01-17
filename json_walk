@@ -119,6 +119,7 @@ function json_walk_pseudo_string_idx(     ss, pos){
     match(ss, /(^"[^"]*"?)|(^[^\n#\/\[{}\],:]*[^\n #\/\[{}\],:])/)   # " TO Try ... Maybe it will slow down the system
     # match(ss, /(^"[^"]*"?)|(^[^\n\ #\/\[{}\],:]+)/)
     # match(ss, /(^"[^"]*"?)|(^[A-Za-z0-9_-\/$]+)/)
+    
     if (RLENGTH <= 0) return false
 
     if (RLENGTH != 64) {
@@ -318,15 +319,13 @@ function json_walk_dict(keypath, indent,
             # if.def color
             if (out_color == true) key_result = out_color_key key_result "\033[0m"
             # end.if[]
-        }  
+        }
 
-        tmp2 = "";      if (json_walk_empty() == true)  tmp2 = result     # optional
-
+        tmp2 = "";      if (json_walk_empty() == true)  tmp2 = result     # optional        
         if (substr(s, s_idx, 1) != ":") json_walk_panic("json_walk_dict() Expect :")
         s_idx ++;
 
         tmp3 = "";      if (json_walk_empty() == true)  tmp3 = result    # optional
-
         # Notice: putkv code
         if (enable_putkv == 1) {
             if (opv2bak == key_result) {
@@ -471,7 +470,7 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
     return true
 }
 
-function json_walk_number(      o_idx) {
+function json_walk_number(      o_idx, ch) {
     # if (substr(s, s_idx, 1) != "0") return false
     match(substr(s, s_idx, 8), /^0+/)
     if (RLENGTH <= 0) return false
@@ -481,6 +480,14 @@ function json_walk_number(      o_idx) {
         match(substr(s, s_idx), /^0+/)
     }
     if (RLENGTH > 0)   s_idx += RLENGTH
+    
+    if ( (enable_pseudo_string)  ) { 
+        if (match(substr(s, s_idx, 1), /[ \n,\]\}]/) == 0) {
+            s_idx = o_idx
+            return false
+        }
+    }
+
     # if.def color
     if (inner_content_generate) {
         if (out_color == true)  result = out_color_number substr(text, o_idx, s_idx - o_idx) "\033[0m"

@@ -18,8 +18,12 @@ json.var(){
 }
 
 json.color(){
-    local varname=${1:?Provide variable name} s
-    awk -v format=1 -v color=1 -f "$JSON_AWK_PATH" <<<"${!varname}"
+    if [ "$1" ]; then
+        local varname=${1:?Provide variable name} s
+        awk -v format=1 -v color=1 -f "$JSON_AWK_PATH" <<<"${!varname}"
+    else
+        awk -v format=1 -v color=1 -f "$JSON_AWK_PATH" -
+    fi
 }
 
 json.push(){ json.append "$@"; }
