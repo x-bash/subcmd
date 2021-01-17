@@ -8,8 +8,8 @@
 # jo b.shift()          == json.shift b
 # jo b.values()         == json.values b
 
-# JSON_AWK_PATH="$(xrc.which awk/json_walk)"
-JSON_AWK_PATH="./json_walk"
+# JSON_AWK_PATH="$(xrc.which json/json_walk.awk)"
+JSON_AWK_PATH="./json_walk.awk"
 json.var(){
     local varname=${1:?Provide variable name} s
     shift

@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-source json.sh
+source json
 
 owner='{
     name: Edwin.Junhao.Lee,
