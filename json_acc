@@ -15,6 +15,8 @@ BEGIN{
 
     RS="\034"
     KEYPATH_SEP = "\034"
+
+    inner_content_generate = true
 }
 
 function debug(msg){
@@ -68,11 +70,13 @@ function json_walk_dict(keypath, indent,
         s = JSON_TOKENS[++s_idx]            # Value
         json_walk_value(cur_keypath, cur_indent)
 
-        if (out_color == true) key = out_color_key key "\033[0m"
-        if (out_format == true) {
-            ret = ret comma "\n" cur_indent key ": " result 
-        } else {
-            ret = ret comma key ":" result 
+        if (inner_content_generate) {
+            if (out_color == true) key = out_color_key key "\033[0m"
+            if (out_format == true) {
+                ret = ret comma "\n" cur_indent key ": " result 
+            } else {
+                ret = ret comma key ":" result 
+            }
         }
 
         if (s == ",") s = JSON_TOKENS[++s_idx]
@@ -85,28 +89,17 @@ function json_walk_dict(keypath, indent,
 }
 
 function json_walk_array(keypath, indent,
-    ret, nth, cur_keypath, cur_indent){
+    data, nth, cur_keypath, cur_indent, cur_item, comma, count){
     # debug("json_walk_array start() ")
     if (s != "[")   return false
 
     nth = -1
-    ret = "["
     s = JSON_TOKENS[++s_idx]
-
     cur_indent = indent     out_indent_space
     
     while (1) {
         nth++;
         if (s == "]") {
-            if (out_format == true) {
-                if (nth == 0) {
-                    ret = ret "]"
-                } else {
-                    ret = ret "\n" indent "]"
-                }
-            } else {
-                ret = ret "]"
-            }
             s = JSON_TOKENS[++s_idx];   break
         }
 
@@ -115,20 +108,29 @@ function json_walk_array(keypath, indent,
         # if (s == ",")  json_walk_panic("json_walk_array() Expect a value but get " s)
         json_walk_value(cur_keypath, cur_indent)
         # debug("json_walk_array() value: " result)
+        data[nth] = result
+        if (s == ",")   s = JSON_TOKENS[++s_idx]
+    }
 
-        if (out_format == true) {   # value
-            ret = ret "\n" cur_indent result
-        } else {
-            ret = ret result
+    if (inner_content_generate) {
+        count = nth
+        result = "[";   comma = ""
+        for (tmp=0; tmp<nth; tmp++) {
+            cur_item = data[tmp]
+            if (cur_item != "") {
+                if (out_format) result = result comma "\n" cur_item
+                else            result = result comma cur_item
+                comma = ","
+            }
         }
-
-        if (s == ",") {
-            ret = ret ","
-            s = JSON_TOKENS[++s_idx]
+        if (out_format == true) {
+            if (count == 0)     result = result "]"
+            else                result = result "\n" indent "]"
+        } else {
+            result = result "]"
         }
     }
-    # debug("json_walk_array end(): " JSON_WALK_ARRAY_TOKEN)
-    result = ret
+
     return true
 }
 

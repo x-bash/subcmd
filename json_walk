@@ -465,11 +465,13 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
     }
 
     if (inner_content_generate)   {
-        if (nth > 0)    result = "["  data[0]
-        else            result = "["
-        for (tmp=1; tmp<nth; tmp++) {
+        result = "[";   comma = ""
+        for (tmp=0; tmp<nth; tmp++) {
             cur_item = data[tmp]
-            if (cur_item != "")  result = result "," cur_item
+            if (cur_item != "")  {
+                result = result comma cur_item
+                comma = ","
+            }
         }
         if (out_format == true) {
             if (count == 0)     result = result "]"
