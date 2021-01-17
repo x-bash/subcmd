@@ -1,7 +1,7 @@
 BEGIN{
     false = 0;      true = 1
 
-    out_color = true
+    out_color = false
     out_format = true;  # Using compilation switch to enable or disable code
     out_indent_step = 2
     out_indent_space = "  "
@@ -29,7 +29,7 @@ function json_walk_panic(msg,       start){
 }
 
 function json_walk_dict(keypath, indent,    
-    ret, nth, cur_keypath, cur_indent){
+    ret, nth, cur_keypath, cur_indent, key, value, comma){
 
     if (s != "{") {
         # debug("json_walk_dict() fails" )
@@ -39,12 +39,12 @@ function json_walk_dict(keypath, indent,
     nth = -1
     ret = "{"
     s = JSON_TOKENS[++s_idx]
+    comma = ""
 
     cur_indent = indent    out_indent_space
     
     while (1) {
         nth ++
-
         if (s == "}") {
             if (out_format == true) {
                 if (nth == 0) {
@@ -59,36 +59,24 @@ function json_walk_dict(keypath, indent,
         }
 
         # if (s == ":") { json_walk_panic("json_walk_dict() Expect A value NOT :") }
-        result = s
-        cur_keypath = keypath KEYPATH_SEP result
-        # debug("json_walk_dict() key: " s)
-        # if.def color
-        if (out_color == true) result = out_color_key result "\033[0m"
-        # end.if[]
-
-        if (out_format == true) {
-            ret = ret "\n" cur_indent result
-        } else {
-            ret = ret result
-        }
+        key = s
+        cur_keypath = keypath KEYPATH_SEP key
 
         s = JSON_TOKENS[++s_idx]
         if (s != ":") json_walk_panic("json_walk_dict() Expect :")
-        if (out_format == true) {
-            ret = ret ": "
-        } else {
-            ret = ret ":"
-        }
-        s = JSON_TOKENS[++s_idx]
-
-        # Value
+        
+        s = JSON_TOKENS[++s_idx]            # Value
         json_walk_value(cur_keypath, cur_indent)
-        ret = ret result
 
-        if (s == ",") {
-            ret = ret ","
-            s = JSON_TOKENS[++s_idx];
+        if (out_color == true) key = out_color_key key "\033[0m"
+        if (out_format == true) {
+            ret = ret comma "\n" cur_indent key ": " result 
+        } else {
+            ret = ret comma key ":" result 
         }
+
+        if (s == ",") s = JSON_TOKENS[++s_idx]
+        comma = ","
     }
 
     # debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
