@@ -73,7 +73,7 @@ function _query_(s,       KEYPATH_SEP,    arr, tmp, idx, n, item){
     else tmp = arr[1]
     for (idx=2; idx<=n; idx ++) {
         item = arr[idx]
-        if ( (match( item, /(^\[)|(^\")|(^\*$)|(^\*\*$)/ ) == false) ) {   #"
+        if ( (match( item, /(^\[)|(^")|(^\*$)|(^\*\*$)/ ) == false) ) {   #"
             tmp = tmp KEYPATH_SEP "\"" item "\""
         } else {
             tmp = tmp KEYPATH_SEP item
@@ -127,7 +127,7 @@ function json_walk_panic(msg,       start){
 function json_walk_pseudo_string_idx(     ss, pos){
     ss = substr(s, s_idx, 64)
 
-    match(ss, /(^"[^"]*"?)|(^[^\n#\/\[{}\],:]*[^\n\ #\/\[{}\],:])/)   # " TO Try ... Maybe it will slow down the system
+    match(ss, /(^"[^"]*"?)|(^[^\n#\/\[{}\],:]*[^\n #\/\[{}\],:])/)   # " TO Try ... Maybe it will slow down the system
     # match(ss, /(^"[^"]*"?)|(^[^\n\ #\/\[{}\],:]+)/)
     # match(ss, /(^"[^"]*"?)|(^[A-Za-z0-9_-\/$]+)/)
     if (RLENGTH <= 0) return false
@@ -141,7 +141,7 @@ function json_walk_pseudo_string_idx(     ss, pos){
     }
 
     # match(substr(s, s_idx), /(^"[^"]*")|(^[A-Za-z0-9_-\/$]+)/);   
-    match(substr(s, s_idx), /(^"[^"]*"?)|(^[^\n#\/\[{}\],:]*[^\n\ #\/\[{}\],:])/)   # " # TO Try ... Maybe it will slow down the system
+    match(substr(s, s_idx), /(^"[^"]*")|(^[^\n#\/\[{}\],:]*[^\n #\/\[{}\],:])/)   # " # TO Try ... Maybe it will slow down the system
     # match(substr(s, s_idx), /(^"[^"]*"?)|(^[^\n\ #\/\[{}\],:]+)/)   # "
     pos = RLENGTH  # index() is no way better then match()
     if (pos <= 0) return false; # json_walk_panic("json_walk_string_idx() Expect \"")
