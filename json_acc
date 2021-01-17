@@ -20,6 +20,7 @@ BEGIN{
 }
 
 function debug(msg){
+    if (dbg == false) return
 	print "idx[" s_idx "]  DEBUG:" msg > "/dev/stderr"
 }
 
@@ -82,8 +83,6 @@ function json_walk_dict(keypath, indent,
         if (s == ",") s = JSON_TOKENS[++s_idx]
         comma = ","
     }
-
-    # debug("json_walk_dict: " JSON_WALK_DICT_TOKEN)
     result = ret
     return true
 }
@@ -143,9 +142,6 @@ function json_walk_value(keypath, indent){
         return true
     }
 
-   # debug("json_walk_value():   " s)
-
-    # if.def format
     if (out_color == true) {
         if      (match(s, "^\""))   result  = out_color_string  s "\033[0m"
         else if (s == "true")       result  = out_color_true    s "\033[0m"
@@ -155,7 +151,6 @@ function json_walk_value(keypath, indent){
     } else {
         result = s
     }
-    # end.if
     s = JSON_TOKENS[++s_idx]
     return true
 }
@@ -169,9 +164,7 @@ function _json_walk(    final, idx, nth){
            json_walk_panic("json_walk() Expect a value")
         }
         final = final "\n" result
-        # print result
     }
-
     return final
 }
 
@@ -181,11 +174,9 @@ function json_walk(text,   final, b_s, b_result, b_s_idx, b_s_len){
     b_s = s;    b_s_idx = s_idx;    b_s_len = s_len;
     
     result = "";
-
     gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\001-\037]*((\\[^u\001-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\001-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
     # gsub(/^\357\273\277|^\377\376|^\376\377|"[^"\\\000-\037]*((\\[^u\000-\037]|\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])[^"\\\000-\037]*)*"|-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?|null|false|true|[ \t\n\r]+|./, "\n&", text)
 	gsub("\n" "[ \t\n\r]+", "\n", text)
-
 
     s_len = split(text, JSON_TOKENS, /\n/)
     s = JSON_TOKENS[s_idx];     s_idx = 1;
