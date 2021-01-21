@@ -151,7 +151,7 @@ function json_walk_pseudo_string_idx(     ss, pos){
 function json_walk_strict_string_idx(     pos){
     # debug("json_walk_string start() ")
 
-    match(substr(s, s_idx, 64), /^("[^"]*"?)/)
+    match(substr(s, s_idx, 64), /^("[^"]*"?)/)  # "
     if (RLENGTH <= 0) return false
     # if (substr(s, s_idx + RLENGTH - 1, 1) == "\"") { # Performance defect design
     if (RLENGTH != 64) {

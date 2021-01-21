@@ -1,13 +1,5 @@
 #! /usr/bin/env bash
 
-# Using awk to parse ...
-# jo b                  == json.color b
-# jo b=[1,2,3]          == json.var b [1,2,3]
-# jo b.hi.c=5           == json.putkv
-# jo b.append(3)        == json.append b 3
-# jo b.shift()          == json.shift b
-# jo b.values()         == json.values b
-
 # JSON_AWK_PATH="$(xrc.which json/json_walk.awk)"
 JSON_AWK_PATH="./json_walk.awk"
 json.var(){
@@ -32,8 +24,10 @@ json.color(){
     fi
 }
 
+# aaa.push()
 json.push(){ json.append "$@"; }
 
+# aaa.append()
 json.append(){
     local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
 
@@ -52,6 +46,7 @@ json.append(){
     else return 1;  fi
 }
 
+# aaa.prepend("value")
 json.prepend(){
     local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
 
@@ -69,6 +64,8 @@ json.prepend(){
     if [ $code -eq 0 ]; then eval "$varname=\"\$s\""
     else return 1;  fi
 }
+
+# jo b.b= 2
 
 : <<"DOCTEST"
 > b={a:1}
@@ -93,6 +90,7 @@ json.put(){
     else return 1;  fi
 }
 
+# jo b.b
 : <<"DOCTEST"
 > b=[1,2,3]
 > json.values b
@@ -115,6 +113,7 @@ json.values(){
     fi
 }
 
+# jo b.b
 json.query(){
     local keypath=${1:?Provide variable name} opv1 varname s
 
@@ -296,6 +295,42 @@ json.dict(){
         printf '  %s: %s' "$(json.escape "$key")" "$(json.escape "$value")"
     done
     printf "\n}"
+}
+
+json.dict.compact(){
+    printf "{"
+
+    local key value
+    local first=0
+    for i in "$@"; do
+        if [ "$first" -eq 0 ]; then
+            first=1
+        else
+            printf ','
+        fi
+
+        key=${i%%=*}
+        if [ "$key" != "$i" ]; then
+            value=${i#*=}
+
+            case "$value" in
+            true|false|null|\{*\}|\[*\]|\"*)
+                printf '%s:%s' "$(json.escape "$key")" "$value" ;;
+            *)
+                if [[ "$value" =~ ^[+-]?[0-9]+(.[0-9]+)*([eE][0-9]+(.[0-9]+))*$ ]]; then
+                    printf '%s:%s' "$(json.escape "$key")" "$value"
+                else
+                    printf '%s:%s' "$key" "$(json.escape "$value")"
+                fi
+            esac
+            continue
+        fi
+
+        key=${i%%\:*}
+        value=${i#*\:}
+        printf '%s: %s' "$(json.escape "$key")" "$(json.escape "$value")"
+    done
+    printf "}"
 }
 
 
