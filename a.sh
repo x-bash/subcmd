@@ -7,6 +7,11 @@ json.query "c.*./(html_url)|(id)/"  | json.attrlist id url | json.color
 for i in $(jo c.*); do
     jo url= i.html_url
     jo state= i.state
+    json.dict url=$url state=$state
+    json.var a '{
+        url: $url,
+        state: $state
+    }'
 done
 
 

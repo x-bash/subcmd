@@ -18,13 +18,13 @@ jo(){
     case $# in
     0)  echo "show help";;
     1)  
-        [[ "$1" =~ ^[A-Za-z_0-9]$ ]] && jo.color "$1" && break;
+        [[ "$1" =~ ^[A-Za-z_0-9]$ ]] && json.color "$1" && break;
         # TODO
-        [[ "$1" =~ ^[A-Za-z_0-9]= ]] && jo.var "${1%%=*}" "${1#*=}" && break;
-        [[ "$1" =~ ^[A-Za-z_0-9.\[\]\*]= ]] && jo.putkv "${1%%=*}" "${1#*=}" && break;
+        [[ "$1" =~ ^[A-Za-z_0-9]= ]] && json.var "${1%%=*}" "${1#*=}" && break;
+        [[ "$1" =~ ^[A-Za-z_0-9.\[\]\*]= ]] && json.putkv "${1%%=*}" "${1#*=}" && break;
 
         jo.query "$1" ;;
-    2);;
+    2)  json.var "$1" "$2";;
     *);;
     esac
 }
