@@ -1,17 +1,12 @@
 jq . '.[] | { url: .html_url, state: .state }'
 
 
-json.query "c.*./(html_url)|(id)/"  | json.attrlist id url | json.color 
-
+json_query "c.*./(html_url)|(id)/"  | json_attrlist id url | json_color 
 
 for i in $(jo c.*); do
     jo url= i.html_url
     jo state= i.state
-    json.dict url=$url state=$state
-    json.var a '{
-        url: $url,
-        state: $state
-    }'
+    json_dict url=$url state=$state
 done
 
 

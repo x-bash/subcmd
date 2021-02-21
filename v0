@@ -2,7 +2,7 @@
 
 JSON_AWK_PATH="$(xrc.which json/v0_walk.awk)"
 # JSON_AWK_PATH="./json_walk.awk"
-json.var(){
+json_var(){
     local varname=${1:?Provide variable name} s
     shift
     if [ $# -ne 0 ]; then
@@ -15,7 +15,7 @@ json.var(){
     else return 1;  fi
 }
 
-json.color(){
+json_color(){
     if [ "$1" ]; then
         local varname=${1:?Provide variable name} s
         awk -v format=1 -v color=1 -f "$JSON_AWK_PATH" <<<"${!varname}"
@@ -25,10 +25,10 @@ json.color(){
 }
 
 # aaa.push()
-json.push(){ json.append "$@"; }
+json_push(){ json_append "$@"; }
 
 # aaa.append()
-json.append(){
+json_append(){
     local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
 
     varname=${keypath%%.*}
@@ -47,7 +47,7 @@ json.append(){
 }
 
 # aaa.prepend("value")
-json.prepend(){
+json_prepend(){
     local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
 
     varname=${keypath%%.*}
@@ -69,10 +69,10 @@ json.prepend(){
 
 : <<"DOCTEST"
 > b={a:1}
-> json.put b.b 2
+> json_put b.b 2
 > echo "$b"
 DOCTEST
-json.put(){
+json_put(){
     local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
 
     varname=${keypath%%.*}
@@ -93,12 +93,12 @@ json.put(){
 # jo b.b
 : <<"DOCTEST"
 > b=[1,2,3]
-> json.values b
+> json_values b
 1
 2
 3
 DOCTEST
-json.values(){
+json_values(){
     local keypath=${1:?Provide variable name} opv1 varname s
 
     varname=${keypath%%.*}
@@ -114,7 +114,7 @@ json.values(){
 }
 
 # jo b.b
-json.query(){
+json_query(){
     local keypath=${1:?Provide variable name} opv1 varname s
 
     varname=${keypath%%.*}
@@ -131,11 +131,11 @@ json.query(){
 
 : <<"DOCTEST"
 > b=[1,2,3]
-> json.del b.[0]
+> json_del b.[0]
 > echo $b
 [2,3]
 DOCTEST
-json.del(){
+json_del(){
     local keypath=${1:?Provide variable name} opv1 varname s
 
     varname=${keypath%%.*}
@@ -155,11 +155,11 @@ json.del(){
 
 : <<"DOCTEST"
 > b=[1,2,3]
-> json.shift b
+> json_shift b
 > echo $b
 [2,3]
 DOCTEST
-json.shift(){
+json_shift(){
     local keypath=${1:?Provide variable name} opv1 varname s
 
     varname=${keypath%%.*}
@@ -179,10 +179,10 @@ json.shift(){
 
 : <<"DOCTEST"
 > b=[1,2,3]
-> json.length b
+> json_length b
 3
 DOCTEST
-json.length(){
+json_length(){
     local keypath=${1:?Provide variable name} opv1 varname s
 
     varname=${keypath%%.*}
@@ -199,11 +199,11 @@ json.length(){
 
 : <<"DOCTEST"
 > b=[1,2,3]
-> json.pop b
+> json_pop b
 > echo $b
 [2,3]
 DOCTEST
-json.pop(){
+json_pop(){
     local keypath=${1:?Provide variable name} opv1 varname s
 
     varname=${keypath%%.*}
@@ -221,7 +221,7 @@ json.pop(){
     else return 1;  fi
 }
 
-json.array(){
+json_array(){
     local s=
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -240,7 +240,7 @@ json.array(){
     echo "[${s:1}]"
 }
 
-json.escape(){
+json_escape(){
     local a="${1:?Provide string}"
     a="$(echo "${a//$'\\'/\\}")"
     a="$(echo "${a//$'\n'/\\n}")"
@@ -250,7 +250,7 @@ json.escape(){
     echo "\"$a\""
 }
 
-json.unescape(){
+json_unescape(){
     if [ $# -gt 0 ]; then
         eval echo "$@"
     else
@@ -261,7 +261,7 @@ json.unescape(){
 }
 
 # Reference: https://github.com/jpmens/jo/blob/master/jo.md
-json.dict(){
+json_dict(){
     printf "{\n"
 
     local key value
@@ -279,12 +279,12 @@ json.dict(){
 
             case "$value" in
             true|false|null|\{*\}|\[*\]|\"*)
-                printf '  %s: %s' "$(json.escape "$key")" "$value" ;;
+                printf '  %s: %s' "$(json_escape "$key")" "$value" ;;
             *)
                 if [[ "$value" =~ ^[+-]?[0-9]+(.[0-9]+)*([eE][0-9]+(.[0-9]+))*$ ]]; then
-                    printf '  %s: %s' "$(json.escape "$key")" "$value"
+                    printf '  %s: %s' "$(json_escape "$key")" "$value"
                 else
-                    printf '  %s: %s' "$key" "$(json.escape "$value")"
+                    printf '  %s: %s' "$key" "$(json_escape "$value")"
                 fi
             esac
             continue
@@ -292,12 +292,12 @@ json.dict(){
 
         key=${i%%\:*}
         value=${i#*\:}
-        printf '  %s: %s' "$(json.escape "$key")" "$(json.escape "$value")"
+        printf '  %s: %s' "$(json_escape "$key")" "$(json_escape "$value")"
     done
     printf "\n}"
 }
 
-json.dict.compact(){
+json_dict_compact(){
     printf "{"
 
     local key value
@@ -315,12 +315,12 @@ json.dict.compact(){
 
             case "$value" in
             true|false|null|\{*\}|\[*\]|\"*)
-                printf '%s:%s' "$(json.escape "$key")" "$value" ;;
+                printf '%s:%s' "$(json_escape "$key")" "$value" ;;
             *)
                 if [[ "$value" =~ ^[+-]?[0-9]+(.[0-9]+)*([eE][0-9]+(.[0-9]+))*$ ]]; then
-                    printf '%s:%s' "$(json.escape "$key")" "$value"
+                    printf '%s:%s' "$(json_escape "$key")" "$value"
                 else
-                    printf '%s:%s' "$key" "$(json.escape "$value")"
+                    printf '%s:%s' "$key" "$(json_escape "$value")"
                 fi
             esac
             continue
@@ -328,7 +328,7 @@ json.dict.compact(){
 
         key=${i%%\:*}
         value=${i#*\:}
-        printf '%s: %s' "$(json.escape "$key")" "$(json.escape "$value")"
+        printf '%s: %s' "$(json_escape "$key")" "$(json_escape "$value")"
     done
     printf "}"
 }
@@ -358,7 +358,7 @@ json.dict.compact(){
 # out_color_true = "\033[7;32m"
 # out_color_false = "\033[7;31m"
 
-json.awk.color1(){
+json_awk.color1(){
     local IFS=$' '
     A=(
     -v out_color_key="\033[0;35m"
@@ -372,7 +372,7 @@ json.awk.color1(){
 }
 
 # TODO: Using JSON
-json.table(){
+json_table(){
     local n="${1:?Provide colume number}"
     shift
     local arr=() final=() idx=0 line IFS
@@ -382,7 +382,7 @@ json.table(){
             (( idx ++ ))
             arr+=("$line")
             if [ "$idx" -eq "$n" ]; then
-                final+=("$(json.array "${arr[@]}")")
+                final+=("$(json_array "${arr[@]}")")
                 arr=()
                 idx=0
             fi
@@ -393,29 +393,29 @@ json.table(){
             (( idx ++ ))
             arr+=("$line")
             if [ "$idx" -eq "$n" ]; then
-                final+=("$(json.array "${arr[@]}")")
+                final+=("$(json_array "${arr[@]}")")
                 arr=()
                 idx=0
             fi
         done
     fi
-    json.array "${final[@]}"
+    json_array "${final[@]}"
 }
 
-json.attrlist(){
+json_attrlist(){
     local arr=() final=() idx=0 line IFS
 
     while read -r line; do
         (( idx ++ ))
         arr+=("${!idx}=$line")
         if [ "$idx" -eq "$#" ]; then
-            final+=("$(json.dict "${arr[@]}")")
+            final+=("$(json_dict "${arr[@]}")")
             arr=()
             idx=0
         fi
     done
 
-    json.array "${final[@]}"
+    json_array "${final[@]}"
 }
 
 
