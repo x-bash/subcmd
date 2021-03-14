@@ -359,7 +359,7 @@ json_dict_compact(){
 # out_color_true = "\033[7;32m"
 # out_color_false = "\033[7;31m"
 
-json_awk.color1(){
+json_awk_color1(){
     local IFS=$' '
     A=(
     -v out_color_key="\033[0;35m"
