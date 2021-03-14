@@ -67,10 +67,11 @@ json_prepend(){
 
 # jo b.b= 2
 
-: <<"DOCTEST"
+: <<'DOCTEST'
 > b={a:1}
 > json_put b.b 2
 > echo "$b"
+{"a":1,"b":"2"}
 DOCTEST
 json_put(){
     local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
@@ -91,7 +92,7 @@ json_put(){
 }
 
 # jo b.b
-: <<"DOCTEST"
+: <<'DOCTEST'
 > b=[1,2,3]
 > json_values b
 1
@@ -129,10 +130,10 @@ json_query(){
     fi
 }
 
-: <<"DOCTEST"
+: <<'DOCTEST'
 > b=[1,2,3]
 > json_del b.[0]
-> echo $b
+> echo $b  # json_del
 [2,3]
 DOCTEST
 json_del(){
@@ -153,10 +154,10 @@ json_del(){
     else return 1;  fi
 }
 
-: <<"DOCTEST"
+: <<'DOCTEST'
 > b=[1,2,3]
 > json_shift b
-> echo $b
+> echo $b; # json_shift
 [2,3]
 DOCTEST
 json_shift(){
@@ -177,7 +178,7 @@ json_shift(){
     else return 1;  fi
 }
 
-: <<"DOCTEST"
+: <<'DOCTEST'
 > b=[1,2,3]
 > json_length b
 3
@@ -197,11 +198,11 @@ json_length(){
     fi
 }
 
-: <<"DOCTEST"
+: <<'DOCTEST'
 > b=[1,2,3]
 > json_pop b
-> echo $b
-[2,3]
+> echo $b # json_pop
+[1,2]
 DOCTEST
 json_pop(){
     local keypath=${1:?Provide variable name} opv1 varname s
