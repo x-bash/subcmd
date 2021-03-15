@@ -1,10 +1,15 @@
-#! /usr/bin/env bash
+# shellcheck shell=sh disable=SC2039
+
+# author:       Li Junhao           edwin.jh.lee@gmail.com    edwinjhlee.github.io
+# maintainer:   Li Junhao
 
 JSON_AWK_PATH="$(xrc which json/v0_walk.awk)"
 # JSON_AWK_PATH="./json_walk.awk"
 json_var(){
-    local varname=${1:?Provide variable name} s
+    local varname=${1:?Provide variable name}
     shift
+
+    local s
     if [ $# -ne 0 ]; then
         s="$(awk -f "$JSON_AWK_PATH" <<<"$@")"
     else
@@ -29,13 +34,15 @@ json_push(){ json_append "$@"; }
 
 # aaa.append()
 json_append(){
-    local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
+    local keypath="${1:?Provide variable name}" 
+    local opv2="${2:?Provide value}"
 
-    varname=${keypath%%.*}
-    opv1=".${keypath#*.}"
+    local varname=${keypath%%.*}
+    local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
     
+    local s
     if [ "$varname" ]; then
         s="$(awk -v op=append -v opv1="$opv1" -v opv2="$opv2" -f "$JSON_AWK_PATH" <<<"${!varname}")"
     else
@@ -48,13 +55,15 @@ json_append(){
 
 # aaa.prepend("value")
 json_prepend(){
-    local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
+    local keypath=${1:?Provide variable name} 
+    local opv2="${2:?Provide value}"
 
-    varname=${keypath%%.*}
-    opv1=".${keypath#*.}"
+    local varname=${keypath%%.*}
+    local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
     
+    local s
     if [ "$varname" ]; then
         s="$(awk -v op=prepend -v opv1="$opv1" -v opv2="$opv2" -f "$JSON_AWK_PATH" <<<"${!varname}")"
     else
@@ -74,13 +83,15 @@ json_prepend(){
 {"a":1,"b":"2"}
 DOCTEST
 json_put(){
-    local keypath=${1:?Provide variable name} opv1 opv2="${2:?Provide value}" varname s
+    local keypath="${1:?Provide variable name}"
+    local opv2="${2:?Provide value}"
 
-    varname=${keypath%%.*}
-    opv1=".${keypath#*.}"
+    local varname="${keypath%%.*}"
+    local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
     
+    local s
     if [ "$varname" ]; then
         s="$(awk -v op=put -v opv1="$opv1" -v opv2="$opv2" -f "$JSON_AWK_PATH" <<<"${!varname}")"
     else
@@ -100,13 +111,14 @@ json_put(){
 3
 DOCTEST
 json_values(){
-    local keypath=${1:?Provide variable name} opv1 varname s
+    local keypath=${1:?Provide variable name}
 
-    varname=${keypath%%.*}
-    opv1=".${keypath#*.}"
+    local varname=${keypath%%.*}
+    local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1=""
     shift 2
     
+    local s
     if [ "$varname" ]; then
         awk -v op=values -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}"
     else
@@ -116,10 +128,10 @@ json_values(){
 
 # jo b.b
 json_query(){
-    local keypath=${1:?Provide variable name} opv1 varname s
+    local keypath=${1:?Provide variable name} 
 
-    varname=${keypath%%.*}
-    opv1=".${keypath#*.}"
+    local varname=${keypath%%.*}
+    local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
 
@@ -137,13 +149,14 @@ json_query(){
 [2,3]
 DOCTEST
 json_del(){
-    local keypath=${1:?Provide variable name} opv1 varname s
+    local keypath=${1:?Provide variable name} 
 
-    varname=${keypath%%.*}
-    opv1=".${keypath#*.}"
+    local varname=${keypath%%.*}
+    local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
     
+    local s
     if [ "$varname" ]; then
         s="$(awk -v op=del -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}")"
     else
@@ -161,13 +174,14 @@ json_del(){
 [2,3]
 DOCTEST
 json_shift(){
-    local keypath=${1:?Provide variable name} opv1 varname s
+    local keypath=${1:?Provide variable name}
 
-    varname=${keypath%%.*}
-    opv1=".${keypath#*.}"
+    local varname=${keypath%%.*}
+    local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
-    
+
+    local s
     if [ "$varname" ]; then
         s="$(awk -v op=shift -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}")"
     else
@@ -184,10 +198,10 @@ json_shift(){
 3
 DOCTEST
 json_length(){
-    local keypath=${1:?Provide variable name} opv1 varname s
+    local keypath="${1:?Provide variable name}" 
 
-    varname=${keypath%%.*}
-    opv1=".${keypath#*.}"
+    local varname=${keypath%%.*}
+    local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
     
@@ -205,13 +219,14 @@ json_length(){
 [1,2]
 DOCTEST
 json_pop(){
-    local keypath=${1:?Provide variable name} opv1 varname s
+    local keypath="${1:?Provide variable name}"
 
-    varname=${keypath%%.*}
-    opv1=".${keypath#*.}"
+    local varname=${keypath%%.*}
+    local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
     
+    local s
     if [ "$varname" ]; then
         s="$(awk -v op=pop -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}")"
     else
@@ -220,6 +235,11 @@ json_pop(){
     local code=$?
     if [ $code -eq 0 ]; then eval "$varname=\"\$s\""
     else return 1;  fi
+}
+
+
+json_flat(){
+    awk -v op=flat-leaf -f "$JSON_AWK_PATH"
 }
 
 json_array(){
@@ -241,6 +261,7 @@ json_array(){
     echo "[${s:1}]"
 }
 
+# Using awk for posix sh
 json_escape(){
     local a="${1:?Provide string}"
     a="$(echo "${a//$'\\'/\\}")"
@@ -251,6 +272,7 @@ json_escape(){
     echo "\"$a\""
 }
 
+# Posix sh version?
 json_unescape(){
     if [ $# -gt 0 ]; then
         eval echo "$@"
