@@ -6,7 +6,7 @@
 JSON_AWK_PATH="$(xrc which json/v0_walk.awk)"
 # JSON_AWK_PATH="./json_walk.awk"
 json_var(){
-    local varname=${1:?Provide variable name}
+    local varname="${1:?Provide variable name}"
     shift
 
     local s
@@ -22,8 +22,10 @@ json_var(){
 
 json_color(){
     if [ "$1" ]; then
-        local varname=${1:?Provide variable name} s
-        awk -v format=1 -v color=1 -f "$JSON_AWK_PATH" <<<"${!varname}"
+        local varname="${1:?Provide variable name}"
+        awk -v format=1 -v color=1 -f "$JSON_AWK_PATH" <<A
+${!varname}
+A
     else
         awk -v format=1 -v color=1 -f "$JSON_AWK_PATH" -
     fi
