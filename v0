@@ -154,6 +154,29 @@ json_values(){
     fi
 }
 
+: <<'DOCTEST'
+> b={a:1,b:2,c:3}
+> json_values b
+a
+b
+c
+DOCTEST
+json_keys(){
+    local keypath=${1:?Provide variable name}
+
+    local varname=${keypath%%.*}
+    local opv1=".${keypath#*.}"
+    [ "$varname" == "$keypath" ] && opv1=""
+    shift 2
+    
+    local s
+    if [ "$varname" ]; then
+        awk -v op=keys -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}"
+    else
+        awk -v op=keys -v opv1="$opv1" -f "$JSON_AWK_PATH"
+    fi
+}
+
 # jo b.b
 json_query(){
     local keypath=${1:?Provide variable name} 

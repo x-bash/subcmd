@@ -542,7 +542,8 @@ function json_walk_primitive(     tmps){
 }
 
 # TODO: make it better ... It will slow down the performance ...
-function json_walk_value(keypath, indent,    res){
+function json_walk_value(keypath, indent,    
+    res, keypath_tmp_arr, keypath_tmp_arr_len){
     if ( op < OP_REPLACE ) return json_walk_value_(keypath, indent)
     else if (op == OP_REPLACE) {
         if (match(keypath, opv1)){
@@ -558,7 +559,10 @@ function json_walk_value(keypath, indent,    res){
             inner_content_generate = true
             res = json_walk_value_(keypath, indent)
             if (opv2 == "kv") { print keypath "\t-->\t" result }
-            else if (opv2 == "k") { print keypath }
+            else if (opv2 == "k") { 
+                keypath_tmp_arr_len = split(keypath, keypath_tmp_arr, KEYPATH_SEP)
+                print keypath_tmp_arr[keypath_tmp_arr_len]
+            }
             else  { print result }
             inner_content_generate = false
             return res
@@ -716,6 +720,13 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
 
     if (op == "values") {
         op = "extract"
+        debug("op_original_pattern: " opv1)
+        opv1 = opv1 ".*"
+    }
+
+    if (op == "keys") {
+        op = "extract"
+        opv2 = "k"
         debug("op_original_pattern: " opv1)
         opv1 = opv1 ".*"
     }
