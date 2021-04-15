@@ -102,14 +102,6 @@ json_prepend(){
     else return 1;  fi
 }
 
-gcr.io/kuar-demo/kuard-amd64:v1
-
-abc/amod
-abc/bmod
-
-@lth/str:v1 => 
-
-
 # jo b.b= 2
 
 : <<'DOCTEST'
