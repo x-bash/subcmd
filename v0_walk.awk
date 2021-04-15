@@ -441,7 +441,7 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
         print nth
     } else if ((op == OP_DEL) && (match(keypath, opv1)) && (match(opv2, /^\[[0-9]+\]$/))) {
         tmp = int(substr(opv2, 2, length(opv2) - 2))
-        print data[tmp] > "/dev/stderr"
+        print data[tmp]
         for (; tmp < count; tmp ++ ){
             data[tmp] = data[tmp+1]
         }
@@ -453,7 +453,7 @@ function json_walk_array(keypath, indent,       cur_indent, data, nth, count, cu
         nth ++
         count ++
     } else if ((op == OP_POP) && (match(keypath, opv1)) ) {
-        print data[nth-1] > "/dev/stderr"
+        print data[nth-1]
         data[--nth] = ""
         count --
     } else if ((op == OP_PUTVAL) && (match(keypath, opv1)) ) {

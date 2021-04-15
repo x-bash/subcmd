@@ -286,7 +286,7 @@ DOCTEST
 
 # TODO: json pop b :a  # values stored in symbol a
 # TODO: json pop b @a  # all values stored in array b
-_json_pop(){
+json_pop(){
     local keypath="${1:?Provide variable name}"
 
     local varname=${keypath%%.*}
@@ -296,19 +296,21 @@ _json_pop(){
     
     local s
     if [ "$varname" ]; then
-        if s="$(awk -v op=pop -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}")"; then
+        if s="$(awk -v op=pop -v opv1="$opv1" -f "$JSON_AWK_PATH" <<A
+${!varname}
+A
+)";     then
             local t=""
-            while :; do
-                read -r s || break
-                printf "%s\n" "$t"
+            while read -r s; do
+                [ -n "$t" ] && printf "%s\n" "$t"
                 t="$s"
             done <<A
-"$s"
+$s
 A
-        eval "$varname=\"\$s\""
+            eval "$varname=\"\$t\""
         else return 1;  fi
     else
-        awk -v op=pop -v opv1="$opv1" -f "$JSON_AWK_PATH" 2>/dev/null
+        awk -v op=pop -v opv1="$opv1" -f "$JSON_AWK_PATH" | tail -n 1
     fi
 }
 
