@@ -283,7 +283,10 @@ json_length(){
 > echo $b # json_pop
 [1,2]
 DOCTEST
-json_pop(){
+
+# TODO: json pop b :a  # values stored in symbol a
+# TODO: json pop b @a  # all values stored in array b
+_json_pop(){
     local keypath="${1:?Provide variable name}"
 
     local varname=${keypath%%.*}
@@ -293,13 +296,20 @@ json_pop(){
     
     local s
     if [ "$varname" ]; then
-        s="$(awk -v op=pop -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}")"
+        if s="$(awk -v op=pop -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}")"; then
+            local t=""
+            while :; do
+                read -r s || break
+                printf "%s\n" "$t"
+                t="$s"
+            done <<A
+"$s"
+A
+        eval "$varname=\"\$s\""
+        else return 1;  fi
     else
-        s="$(awk -v op=pop -v opv1="$opv1" -f "$JSON_AWK_PATH")"
+        awk -v op=pop -v opv1="$opv1" -f "$JSON_AWK_PATH" 2>/dev/null
     fi
-    local code=$?
-    if [ $code -eq 0 ]; then eval "$varname=\"\$s\""
-    else return 1;  fi
 }
 
 
