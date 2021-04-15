@@ -1,9 +1,35 @@
 # shellcheck shell=sh disable=SC2039
 
-# author:       Li Junhao           edwin.jh.lee@gmail.com    edwinjhlee.github.io
+# author:       Li Junhao           l@x-cmd.com    edwinjhlee.github.io
 # maintainer:   Li Junhao
 
 JSON_AWK_PATH="$(xrc which json/v0_walk.awk)"
+
+json(){
+    local op
+    if [ $# -eq 0 ]; then
+        op=help
+    else
+        op="${1}"
+        shift
+    fi
+
+    case "$op" in
+        var)                json_var        "$@" ;;
+        color)              json_color      "$@" ;;
+        push|append)        json_push       "$@" ;;
+        unshift|prepend)    json_prepend    "$@" ;;
+        put)                json_put        "$@" ;;
+        values)             json_values     "$@" ;;
+        q|query)            json_query      "$@" ;;
+        del)                json_del        "$@" ;;
+        shift)              json_shift      "$@" ;;
+        pop)                json_pop        "$@" ;;
+        length)             json_length     "$@" ;;
+        *)                  json q          "$op" "$@" ;;
+    esac
+}
+
 # JSON_AWK_PATH="./json_walk.awk"
 json_var(){
     local varname="${1:?Provide variable name}"
@@ -75,6 +101,14 @@ json_prepend(){
     if [ $code -eq 0 ]; then eval "$varname=\"\$s\""
     else return 1;  fi
 }
+
+gcr.io/kuar-demo/kuard-amd64:v1
+
+abc/amod
+abc/bmod
+
+@lth/str:v1 => 
+
 
 # jo b.b= 2
 
