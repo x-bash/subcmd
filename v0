@@ -20,12 +20,14 @@ json(){
         push|append)        json_push       "$@" ;;
         unshift|prepend)    json_prepend    "$@" ;;
         put)                json_put        "$@" ;;
-        values)             json_values     "$@" ;;
+        k|keys)             json_keys       "$@" ;;
+        v|values)           json_values     "$@" ;;
         q|query)            json_query      "$@" ;;
         del)                json_del        "$@" ;;
         shift)              json_shift      "$@" ;;
         pop)                json_pop        "$@" ;;
         length)             json_length     "$@" ;;
+        unescape)           json_unescape   "$@" ;;
         *)                  json q          "$op" "$@" ;;
     esac
 }
@@ -139,6 +141,12 @@ json_put(){
 3
 DOCTEST
 json_values(){
+    local op=values
+    if [ "$1" = "-r" ]; then
+        op="values-r"
+        shift
+    fi
+
     local keypath=${1:?Provide variable name}
 
     local varname=${keypath%%.*}
@@ -148,9 +156,9 @@ json_values(){
     
     local s
     if [ "$varname" ]; then
-        awk -v op=values -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}"
+        awk -v op="$op" -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}"
     else
-        awk -v op=values -v opv1="$opv1" -f "$JSON_AWK_PATH"
+        awk -v op="$op" -v opv1="$opv1" -f "$JSON_AWK_PATH"
     fi
 }
 
@@ -162,6 +170,12 @@ b
 c
 DOCTEST
 json_keys(){
+    local op=keys
+    if [ "$1" = "-r" ]; then
+        op=keys-r
+        shift
+    fi
+
     local keypath=${1:?Provide variable name}
 
     local varname=${keypath%%.*}
@@ -171,9 +185,9 @@ json_keys(){
     
     local s
     if [ "$varname" ]; then
-        awk -v op=keys -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}"
+        awk -v op="$op" -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}"
     else
-        awk -v op=keys -v opv1="$opv1" -f "$JSON_AWK_PATH"
+        awk -v op="$op" -v opv1="$opv1" -f "$JSON_AWK_PATH"
     fi
 }
 

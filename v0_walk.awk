@@ -43,6 +43,17 @@ BEGIN{
     inner_content_generate = true  # For extract
 }
 
+function unwrap(str){
+    if (substr(str, 1) != "\"") return str
+    gsub(/\\"/, "\"", str) #"
+    gsub("\\n", "\n", str) #"
+    gsub("\\t", "\t", str) #"
+    gsub("\\v", "\v", str) #"
+    gsub("\\b", "\b", str) #"
+    gsub("\\r", "\r", str) #"
+    return substr(str, 2, length(str)-2)
+}
+
 function _query_(s,       KEYPATH_SEP,    arr, tmp, idx, n, item){
     if (KEYPATH_SEP == 0) KEYPATH_SEP = "\034"
 
@@ -563,6 +574,13 @@ function json_walk_value(keypath, indent,
                 keypath_tmp_arr_len = split(keypath, keypath_tmp_arr, KEYPATH_SEP)
                 print keypath_tmp_arr[keypath_tmp_arr_len]
             }
+            else if (opv2 == "k-r") { 
+                keypath_tmp_arr_len = split(keypath, keypath_tmp_arr, KEYPATH_SEP)
+                print unwrap(keypath_tmp_arr[keypath_tmp_arr_len])
+            }
+            else if (opv2 == "v-r") { 
+                print unwrap(result)
+            }
             else  { print result }
             inner_content_generate = false
             return res
@@ -724,9 +742,23 @@ function json_walk(text_to_parsed,          json_indent,        b_s, b_result, b
         opv1 = opv1 ".*"
     }
 
+    if (op == "values-r") {
+        op = "extract"
+        opv2 = "v-r"
+        debug("op_original_pattern: " opv1)
+        opv1 = opv1 ".*"
+    }
+
     if (op == "keys") {
         op = "extract"
         opv2 = "k"
+        debug("op_original_pattern: " opv1)
+        opv1 = opv1 ".*"
+    }
+
+    if (op == "keys-r") {
+        op = "extract"
+        opv2 = "k-r"
         debug("op_original_pattern: " opv1)
         opv1 = opv1 ".*"
     }
