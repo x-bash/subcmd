@@ -220,16 +220,24 @@ json_del(){
     local opv1=".${keypath#*.}"
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
-    
-    local s
+
     if [ "$varname" ]; then
-        s="$(awk -v op=del -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}")"
+        if s="$(awk -v op=del -v opv1="$opv1" -f "$JSON_AWK_PATH" <<A
+${!varname}
+A
+)";     then
+            local t=""
+            while read -r s; do
+                [ -n "$t" ] && printf "%s\n" "$t"
+                t="$s"
+            done <<A
+$s
+A
+            eval "$varname=\"\$t\""
+        else return 1;  fi
     else
-        s="$(awk -v op=del -v opv1="$opv1" -f "$JSON_AWK_PATH")"
+        awk -v op=del -v opv1="$opv1" -f "$JSON_AWK_PATH" | tail -n 1
     fi
-    local code=$?
-    if [ $code -eq 0 ]; then eval "$varname=\"\$s\""
-    else return 1;  fi
 }
 
 : <<'DOCTEST'
@@ -246,15 +254,23 @@ json_shift(){
     [ "$varname" == "$keypath" ] && opv1="."
     shift 2
 
-    local s
     if [ "$varname" ]; then
-        s="$(awk -v op=shift -v opv1="$opv1" -f "$JSON_AWK_PATH" <<<"${!varname}")"
+        if s="$(awk -v op=shift -v opv1="$opv1" -f "$JSON_AWK_PATH" <<A
+${!varname}
+A
+)";     then
+            local t=""
+            while read -r s; do
+                [ -n "$t" ] && printf "%s\n" "$t"
+                t="$s"
+            done <<A
+$s
+A
+            eval "$varname=\"\$t\""
+        else return 1;  fi
     else
-        s="$(awk -v op=shift -v opv1="$opv1" -f "$JSON_AWK_PATH")"
+        awk -v op=shift -v opv1="$opv1" -f "$JSON_AWK_PATH" | tail -n 1
     fi
-    local code=$?
-    if [ $code -eq 0 ]; then eval "$varname=\"\$s\""
-    else return 1;  fi
 }
 
 : <<'DOCTEST'
