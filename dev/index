@@ -1,9 +1,9 @@
-dev.json.push(){
+dev.subcmd.push(){
     git remote remove gitee 2>/dev/null
-    git remote add gitee git@gitee.com:x-bash/json.git
+    git remote add gitee git@gitee.com:x-bash/subcmd.git
     git push gitee
 
     git remote remove github 2>/dev/null
-    git remote add github git@github.com:x-bash/json.git
+    git remote add github git@github.com:x-bash/subcmd.git
     git push github
 }
