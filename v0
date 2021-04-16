@@ -1,11 +1,11 @@
 
-subcommand(){
-    printf "%s" "$1" | awk -f ./subcommand.awk
+subcmd(){
+    printf "%s" "$1" | awk -f ./subcmd.awk
 }
 
-subcommand "
+subcmd "
 json    json utilities
-        Uasge:  json subcommand [...arguments]
+        Uasge:  json subcmd [...arguments]
         Please visit following hosting repository for more information:
             https://gitee.com/x-bash/json
             https://github.com/x-bash/json
