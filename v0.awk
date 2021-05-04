@@ -64,7 +64,7 @@ END {
 
 
     code = code "\n    advise-json-items)\t\tprintf \"" json "\n\" ;;"
-    code = code "\n    advise-json)\t\tprintf \"{" "$(" prefix " advise-json-items)" "\n}\n\" ;;"
+    code = code "\n    advise-json)\t\tprintf \"{" "$(" prefix "_subcmd advise-json-items)" "\n}\n\" ;;"
 
     code = code "\n    help)\t\tprintf \"" help_str "\n\" ;;"
     print code "\nesac"

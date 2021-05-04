@@ -1,4 +1,5 @@
 
 subcmd(){
     eval "$(printf "%s" "$2" | awk -v prefix="$1" -f "$(xrc which subcmd/v0.awk)")"
+#     eval "$(printf "%s" "$2" | awk -v prefix="$1" -f ./v0.awk)"
 }
