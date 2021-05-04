@@ -24,6 +24,7 @@ BEGIN {
 
     start = 0
     code = "local op=\"${1:?Provide op}\"\n"
+    code = code "shift" "\n"
     code = code "case \"$op\" in"
 
     json = ""
