@@ -6,7 +6,7 @@ function handle(subcmd, text,
 
         full_subcmd = prefix "_" substr(arr[1], 2)
 
-        code = code "\n    " substr(subcmd, 2) ")\t\t" full_subcmd "  ${1:-\"$@\"}  ;;"
+        code = code "\n    " substr(subcmd, 2) ")\t\t" full_subcmd "  ${1:+\"$@\"}  ;;"
 
         gsub(/\|/, ":", subcmd)
         if (json == "") {
