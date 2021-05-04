@@ -50,10 +50,11 @@ start==1{
 
 start==0{
     if (match($0, /^Subcommand:/)) {
-        help_str = help_str "\n" out_title $0 "\033[0m"
+        # help_str = help_str "\n" out_title $0 "\033[0m"
+        help_str = out_title $0 "\033[0m"
         start = 1
     } else {
-        help_str = help_str "\n" $0
+        # help_str = help_str "\n" $0
     }
 }
 
